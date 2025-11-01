@@ -13,46 +13,4 @@
 /config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
 
-### Symfony environment files ###
-.env.local
-.env.*.local
-.env.local.php
-
-### Symfony secrets ###
-/config/secrets/*.php
-/config/secrets/**/*.php
-
-### Logs and cache ###
-/var/cache/
-/var/log/
-
-### JWT keys and configs ###
-
-### Vendor and dependencies ###
-/node_modules/
-
-### IDE/editor ###
-.idea/
-.vscode/
-*.iml
-
-### PHPStorm ###
-*.phpstorm.meta.php
-
-### Compiled files ###
-
-### Composer ###
-/composer.lock
-
-### Doctrine ###
-/migrations/
-
-### Symfony MakerBundle (dev) ###
-/src/Migrations/
-
-### PHP CS Fixer ###
-.php_cs.cache
-
-### Other sensitive files ###
-/config/packages/prod/*
-/config/packages/dev/*
+.idea
