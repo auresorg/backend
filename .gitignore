@@ -14,7 +14,6 @@
 ###< lexik/jwt-authentication-bundle ###
 
 ### Symfony environment files ###
-.env
 .env.local
 .env.*.local
 .env.local.php
