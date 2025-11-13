@@ -17,6 +17,9 @@ class User implements UserInterface
     #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\OneToMany(targetEntity: Experience::class, mappedBy: 'user', cascade: ['remove'])]
+    private Collection $experiences;
+
     //one to many with project
     #[ORM\OneToMany(targetEntity: Project::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
     private Collection $projects;
@@ -38,6 +41,23 @@ class User implements UserInterface
         $this->projects = new ArrayCollection();
     }
 
+
+    public function getExperiences()
+    {
+        return $this->experiences;
+    }
+
+    public function getExperiencesCount(): int
+    {
+        return $this->experienceCount;
+    }
+
+    public function setExperiencesCount(int $count): self
+    {
+        $this->experiencesCount = $count;
+        return $this;
+    }
+    
     public function getAwards(): Collection
     {
         return $this->awards;
