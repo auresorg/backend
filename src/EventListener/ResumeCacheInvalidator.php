@@ -5,6 +5,8 @@ namespace App\EventListener;
 use App\Entity\Project;
 use App\Entity\Experience;
 use App\Entity\Certification;
+use App\Entity\Education;  
+use App\Entity\Award;      
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
 use Doctrine\ORM\Event\PostPersistEventArgs;
 use Doctrine\ORM\Event\PostRemoveEventArgs;
@@ -26,7 +28,8 @@ class ResumeCacheInvalidator
     {
         if (!$role || !$user) return;
 
-        $this->logger->info("Invalidating Resume Cache for User: {$user->getId()} Role: {$role}");
+        $this->logger->info("Invalidating Targeted Cache -> User: {$user->getId()} Role: {$role}");
+
         $sql = "
             UPDATE resumes 
             SET data_updated_at = NOW(), updated_at = NOW()
@@ -36,6 +39,23 @@ class ResumeCacheInvalidator
         $conn->executeStatement($sql, [
             'username' => $user->getUsername(),
             'role' => $role
+        ]);
+    }
+
+    private function touchAllCaches(Connection $conn, $user): void
+    {
+        if (!$user) return;
+
+        $this->logger->info("Invalidating ALL Caches -> User: {$user->getId()}");
+
+        $sql = "
+            UPDATE resumes 
+            SET data_updated_at = NOW(), updated_at = NOW()
+            WHERE username = :username
+        ";
+
+        $conn->executeStatement($sql, [
+            'username' => $user->getUsername()
         ]);
     }
 
@@ -56,40 +76,49 @@ class ResumeCacheInvalidator
 
         $this->handleEvent($entity, $conn);
 
-        // Check if ROLE changed to invalidate the old resume too
-        if ($this->supports($entity)) {
+        if ($this->isTargetedEntity($entity)) {
             $changeSet = $args->getObjectManager()->getUnitOfWork()->getEntityChangeSet($entity);
             if (isset($changeSet['role'])) {
                 $oldRoleVal = $changeSet['role'][0];
                 $oldRole = $oldRoleVal instanceof \BackedEnum ? $oldRoleVal->value : $oldRoleVal;
+                 
                 $this->touchCache($conn, $entity->getUser(), $oldRole);
             }
         }
     }
 
-    // FIX: Helper to safely check entity type (ignoring Proxies)
-    private function supports(object $entity): bool
+    private function isTargetedEntity(object $entity): bool
     {
         return $entity instanceof Project || 
                $entity instanceof Experience || 
-               $entity instanceof Certification;
+               $entity instanceof Certification ||
+               $entity instanceof Award;  
+    }
+
+    private function isGlobalEntity(object $entity): bool
+    {
+        return $entity instanceof Education;  
     }
 
     private function handleEvent(object $entity, Connection $conn): void
     {
-        // FIX: Use instanceof instead of get_class()
-        if (!$this->supports($entity)) {
+         
+        if ($this->isGlobalEntity($entity)) {
+            if (method_exists($entity, 'getUser')) {
+                $this->touchAllCaches($conn, $entity->getUser());
+            }
             return;
         }
 
-        // Defensive check just in case
-        if (!method_exists($entity, 'getUser') || !method_exists($entity, 'getRole')) {
-            return;
+        if ($this->isTargetedEntity($entity)) {
+            if (!method_exists($entity, 'getUser') || !method_exists($entity, 'getRole')) {
+                return;
+            }
+
+            $roleVal = $entity->getRole();
+            $role = $roleVal instanceof \BackedEnum ? $roleVal->value : $roleVal;
+
+            $this->touchCache($conn, $entity->getUser(), $role);
         }
-
-        $roleVal = $entity->getRole();
-        $role = $roleVal instanceof \BackedEnum ? $roleVal->value : $roleVal;
-
-        $this->touchCache($conn, $entity->getUser(), $role);
     }
 }
