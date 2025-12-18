@@ -18,6 +18,18 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_USER')]
 final class ProjectController extends AbstractController
 {
+    private function normalizeUrl(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+        if (!preg_match("~^(?:f|ht)tps?://~i", $url)) {
+            $url = "https://" . $url;
+        }
+        return $url;
+    }
+
     #[Route('', name: 'api_project_index', methods: ['GET'])]
     public function index(ProjectRepository $projectRepository): Response
     {
@@ -29,6 +41,7 @@ final class ProjectController extends AbstractController
                 'id' => $project->getId(),
                 'name' => $project->getName(),
                 'repo' => $project->getRepo(),
+                'url' => $project->getUrl(), // NEW
                 'tech' => $project->getTech(),
                 'description' => $project->getDescription(),
                 'role' => $project->getRole()->value,
@@ -127,6 +140,7 @@ final class ProjectController extends AbstractController
             'id' => $project->getId(),
             'name' => $project->getName(),
             'repo' => $project->getRepo(),
+            'url' => $project->getUrl(),
             'tech' => $project->getTech(),
             'description' => $project->getDescription(),
             'role' => $project->getRole()->value,
@@ -166,6 +180,13 @@ final class ProjectController extends AbstractController
             } else {
                 $project->setRepo($data['repo']);
             }
+        }
+
+        if (isset($data['url'])) {
+            $normalizedUrl = $this->normalizeUrl($data['url']);
+            $project->setUrl($normalizedUrl);
+        } else {
+            $project->setUrl(null);
         }
 
         //check tech. if removed any tech, decrement user skill. if added any tech, increment user skill.

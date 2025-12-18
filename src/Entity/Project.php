@@ -21,6 +21,9 @@ class Project
     #[ORM\Column(length: 140)]
     private ?string $repo = null;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $url = null;
+
     #[ORM\Column(type: 'json', options: ['default' => '[]'])]
     private array $tech = [];
 
@@ -126,5 +129,15 @@ class Project
     public function getStartDate(): ?DateTimeInterface
     {
         return $this->startDate;
+    }
+
+    public function getUrl(): ?string
+    {
+        return $this->url;
+    }
+
+    public function setUrl(?string $url): void
+    {
+        $this->url = $url;
     }
 }
