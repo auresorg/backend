@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 
 #[Route('/auth')]
 final class AuthController extends AbstractController
@@ -22,12 +23,13 @@ final class AuthController extends AbstractController
     private EntityManagerInterface $em;
     private UserRepository $userRepository;
     private JWTTokenManagerInterface $jwtManager;
+    private RefreshTokenManagerInterface $refreshTokenManager;
 
     private LoggerInterface $logger;
     private string $githubClientId;
     private string $githubClientSecret;
 
-    public function __construct(EntityManagerInterface $em, UserRepository $userRepository, LoggerInterface $logger, JWTTokenManagerInterface $jwtManager)
+    public function __construct(EntityManagerInterface $em, UserRepository $userRepository, LoggerInterface $logger, JWTTokenManagerInterface $jwtManager, RefreshTokenManagerInterface $refreshTokenManager)
     {
         $this->em = $em;
         $this->userRepository = $userRepository;
@@ -35,6 +37,7 @@ final class AuthController extends AbstractController
         $this->githubClientSecret = $_ENV['GITHUB_CLIENT_SECRET'];
         $this->jwtManager = $jwtManager;
         $this->logger = $logger;
+        $this->refreshTokenManager = $refreshTokenManager;
     }
 
     /**
@@ -141,7 +144,13 @@ final class AuthController extends AbstractController
             return new Response(null, 500);
         }
 
-        return $this->json(['token' => $jwt, 'user' => [
+        $refreshToken = $this->refreshTokenManager->create();
+        $refreshToken->setUsername($user->getUserIdentifier());
+        $refreshToken->setRefreshToken(); 
+        $refreshToken->setValid((new \DateTime())->modify('+1 month')); 
+        $this->refreshTokenManager->save($refreshToken);
+
+        return $this->json(['token' => $jwt, 'refresh_token' => $refreshToken->getRefreshToken(), 'user' => [
             'firstName' => $user->getFirstName(),
             'lastName' => $user->getLastName(),
             'username' => $user->getUsername(),
