@@ -1,7 +1,9 @@
 nelmio_cors:
     defaults:
-        origin_regex: true
-        allow_origin: ['*']
+        allow_credentials: true
+        allow_origin: 
+            - 'http://localhost:3000'
+            - 'https://calm-pond-02bf0a01e.3.azurestaticapps.net'
         allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
         allow_headers: ['Content-Type', 'Authorization']
         expose_headers: ['Link']
