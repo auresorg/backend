@@ -11,6 +11,12 @@ security:
                 property: id  # internal PK used for JWT identifier
 
     firewalls:
+        refresh:
+            pattern: ^/api/token/refresh
+            stateless: true
+            refresh_jwt:
+                check_path: /api/token/refresh
+            
         login:
             pattern: ^/auth/github
             stateless: true
