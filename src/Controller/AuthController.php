@@ -171,6 +171,7 @@ final class AuthController extends AbstractController
                 'plan' => $user->getPlan(),
                 'linkedin' => $user->getLinkedin(),
                 'leetcode' => $user->getLeetcode(),
+                'portfolio' => $user->getPortfolio(),
                 'skills' => $user->getSkills(),
                 'projectsCount' => $user->getProjectsCount(),
                 'certCount' => $user->getCertCount(),

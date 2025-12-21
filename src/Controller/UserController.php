@@ -39,6 +39,7 @@ class UserController extends AbstractController
             'plan' => $user->getPlan(),
             'linkedin' => $user->getLinkedin(),
             'leetcode' => $user->getLeetcode(),
+            'portfolio' => $user->getPortfolio(),
             'skills' => $user->getSkills(),
             'projectsCount' => $user->getProjectsCount(),
             'certCount' => $user->getCertCount(),
@@ -81,6 +82,54 @@ class UserController extends AbstractController
             'certCount' => $user->getCertCount(),
             'awardsCount' => $user->getAwardsCount(),
             'experienceCount' => $user->getExperienceCount(),
+        ]);
+    }
+
+    #[Route('/privacy', methods: ['GET'])]
+    public function getPrivacySettings(): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
+        return $this->json([
+            'showEmail' => $user->isShowEmail(),
+            'showProjects' => $user->isShowProjects(),
+            'showExperience' => $user->isShowExperience(),
+            'showCertifications' => $user->isShowCertifications(),
+            'showEducation' => $user->isShowEducation(),
+            'showAwards' => $user->isShowAwards(),
+        ]);
+    }
+
+    #[Route('/privacy', methods: ['PUT'])]
+    public function updatePrivacySettings(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (isset($data['showEmail'])) $user->setShowEmail((bool)$data['showEmail']);
+        if (isset($data['showProjects'])) $user->setShowProjects((bool)$data['showProjects']);
+        if (isset($data['showExperience'])) $user->setShowExperience((bool)$data['showExperience']);
+        if (isset($data['showCertifications'])) $user->setShowCertifications((bool)$data['showCertifications']);
+        if (isset($data['showEducation'])) $user->setShowEducation((bool)$data['showEducation']);
+        if (isset($data['showAwards'])) $user->setShowAwards((bool)$data['showAwards']);
+
+        $this->em->flush();
+        return $this->json([
+            'showEmail' => $user->isShowEmail(),
+            'showProjects' => $user->isShowProjects(),
+            'showExperience' => $user->isShowExperience(),
+            'showCertifications' => $user->isShowCertifications(),
+            'showEducation' => $user->isShowEducation(),
+            'showAwards' => $user->isShowAwards(),
         ]);
     }
 
