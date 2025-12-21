@@ -41,6 +41,89 @@ class User implements UserInterface
         $this->projects = new ArrayCollection();
     }
 
+    #[ORM\Column(name: 'showEmail', type: 'boolean', options: ['default' => true])]
+    private bool $showEmail = true;
+
+    #[ORM\Column(name: 'showProjects', type: 'boolean', options: ['default' => true])]
+    private bool $showProjects = true;
+
+    #[ORM\Column(name: 'showExperience', type: 'boolean', options: ['default' => true])]
+    private bool $showExperience = true;
+
+    #[ORM\Column(name: 'showCertifications', type: 'boolean', options: ['default' => true])]
+    private bool $showCertifications = true;
+
+    #[ORM\Column(name: 'showEducation', type: 'boolean', options: ['default' => true])]
+    private bool $showEducation = true;
+
+    #[ORM\Column(name: 'showAwards', type: 'boolean', options: ['default' => true])]
+    private bool $showAwards = true;
+
+    public function isShowEmail(): bool
+    {
+        return $this->showEmail;
+    }
+
+    public function setShowEmail(bool $showEmail): self
+    {
+        $this->showEmail = $showEmail;
+        return $this;
+    }
+
+    public function isShowProjects(): bool
+    {
+        return $this->showProjects;
+    }
+
+    public function setShowProjects(bool $showProjects): self
+    {
+        $this->showProjects = $showProjects;
+        return $this;
+    }
+
+    public function isShowExperience(): bool
+    {
+        return $this->showExperience;
+    }
+
+    public function setShowExperience(bool $showExperience): self
+    {
+        $this->showExperience = $showExperience;
+        return $this;
+    }
+
+    public function isShowCertifications(): bool
+    {
+        return $this->showCertifications;
+    }
+
+    public function setShowCertifications(bool $showCertifications): self
+    {
+        $this->showCertifications = $showCertifications;
+        return $this;
+    }
+
+    public function isShowEducation(): bool
+    {
+        return $this->showEducation;
+    }
+
+    public function setShowEducation(bool $showEducation): self
+    {
+        $this->showEducation = $showEducation;
+        return $this;
+    }
+
+    public function isShowAwards(): bool
+    {
+        return $this->showAwards;
+    }
+
+    public function setShowAwards(bool $showAwards): self
+    {
+        $this->showAwards = $showAwards;
+        return $this;
+    }
 
     public function getExperiences()
     {
