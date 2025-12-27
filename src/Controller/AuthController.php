@@ -128,8 +128,10 @@ final class AuthController extends AbstractController
         }
 
         $user = $this->userRepository->findByGithubId($githubId);
+        $isNewUser = false;
 
         if (!$user) {
+            $isNewUser = true;
             $user = new User();
             $user->setGithubId($githubId);
             $user->setUsername($username);
@@ -145,10 +147,31 @@ final class AuthController extends AbstractController
 
         $this->em->flush();
 
+        if ($isNewUser) {
+            $roles = ['frontend', 'backend', 'fullstack', 'devops', 'mobile', 'aiml', 'product', 'qa', 'designer', 'blockchain'];
+            $conn = $this->em->getConnection();
+            
+            $sql = "INSERT INTO resumes (user_id, username, role, data_updated_at) VALUES ";
+            $params = [
+                'uid' => $user->getId(), 
+                'uname' => $user->getUsername(),
+                'now' => (new \DateTime())->format('Y-m-d H:i:s')
+            ];
+            $values = [];
+
+            foreach ($roles as $i => $role) {
+                $values[] = "(:uid, :uname, :r$i, :now)";
+                $params["r$i"] = $role;
+            }
+
+            $sql .= implode(', ', $values);
+            $conn->executeStatement($sql, $params);
+        }
+
         $jwt = null;
         try {
             $jwt = $this->jwtManager->createFromPayload($user, ['plan' => $user->getPlan()]);
-        } catch (ContainerExceptionInterface $e) {
+        } catch (\Psr\Container\ContainerExceptionInterface $e) {
             $this->logger->error('JWTTokenManagerInterface container error: ' . $e->getMessage());
             return new Response(null, 500);
         }
