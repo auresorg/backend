@@ -133,6 +133,42 @@ class UserController extends AbstractController
         ]);
     }
 
+    #[Route('/roleres', methods: ['GET'])]
+    public function getRoleResumes(): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        if (!$user) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $conn = $this->em->getConnection();
+        
+        $sql = "
+            SELECT role, compiled_at, projects, certificates, awards, experience 
+            FROM resumes 
+            WHERE user_id = :uid
+        ";
+        
+        $rows = $conn->executeQuery($sql, ['uid' => $user->getId()])->fetchAllAssociative();
+
+        $data = array_map(function ($row) {
+            return [
+                'role' => $row['role'],
+                'last_compiled' => $row['compiled_at'],
+                'stats' => [
+                    'projects' => $row['projects'],
+                    'certificates' => $row['certificates'],
+                    'awards' => $row['awards'],
+                    'experience' => $row['experience'],
+                ]
+            ];
+        }, $rows);
+
+        return $this->json($data);
+    }
+
     #[Route('', methods: ['DELETE'])]
     public function deleteCurrentUser(): Response
     {
