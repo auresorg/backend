@@ -170,7 +170,7 @@ final class AuthController extends AbstractController
 
         $jwt = null;
         try {
-            $jwt = $this->jwtManager->createFromPayload($user, ['plan' => $user->getPlan()]);
+            $jwt = $this->jwtManager->create($user);
         } catch (\Psr\Container\ContainerExceptionInterface $e) {
             $this->logger->error('JWTTokenManagerInterface container error: ' . $e->getMessage());
             return new Response(null, 500);
