@@ -4,6 +4,7 @@ nelmio_cors:
         allow_origin: 
             - 'http://localhost:3000'
             - 'https://calm-pond-02bf0a01e.3.azurestaticapps.net'
+            - 'https://frontend-alpha-plum-68.vercel.app'
         allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
         allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
         expose_headers: ['Link']
