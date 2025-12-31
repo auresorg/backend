@@ -131,6 +131,25 @@ final class AuthController extends AbstractController
         $isNewUser = false;
 
         if (!$user) {
+            $conn = $this->em->getConnection();
+            $sql = "SELECT COUNT(*) AS cnt FROM invites WHERE username = :username";
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->executeQuery(['username' => $username]);
+            $count = $result->fetchAssociative()['cnt'] ?? 0;
+            if ($count == 0) {
+
+                try {
+                    $client = HttpClient::create();
+                    $client->request('POST', 'https://premise.vishok.me/tg/auresadm/inv', [
+                        'json' => ['username' => $username]
+                    ]);
+                } catch (Exception $e) {
+                    // Log error if bot is down, but proceed with 403
+                }
+
+                return new Response(null, 403);
+            }
+
             $isNewUser = true;
             $user = new User();
             $user->setGithubId($githubId);
@@ -150,10 +169,10 @@ final class AuthController extends AbstractController
         if ($isNewUser) {
             $roles = ['frontend', 'backend', 'fullstack', 'devops', 'mobile', 'aiml', 'product', 'qa', 'designer', 'blockchain'];
             $conn = $this->em->getConnection();
-            
+
             $sql = "INSERT INTO resumes (user_id, username, role, data_updated_at) VALUES ";
             $params = [
-                'uid' => $user->getId(), 
+                'uid' => $user->getId(),
                 'uname' => $user->getUsername(),
                 'now' => (new \DateTime())->format('Y-m-d H:i:s')
             ];
