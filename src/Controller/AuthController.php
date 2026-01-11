@@ -236,4 +236,10 @@ final class AuthController extends AbstractController
 
         return $response;
     }
+
+    #[Route('/ping', name: 'app_auth_ping', methods: ['GET'])]
+    public function ping(): Response
+    {
+        return new Response(null, 200);
+    }
 }
