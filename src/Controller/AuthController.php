@@ -132,21 +132,23 @@ final class AuthController extends AbstractController
 
         if (!$user) {
             $conn = $this->em->getConnection();
-            $sql = "SELECT COUNT(*) AS cnt FROM invites WHERE username = :username";
-            $stmt = $conn->prepare($sql);
-            $result = $stmt->executeQuery(['username' => $username]);
-            $count = $result->fetchAssociative()['cnt'] ?? 0;
-            if ($count == 0) {
 
-                try {
-                    $client = HttpClient::create();
-                    $client->request('POST', 'https://premise.vishok.me/tg/auresadm/inv', [
-                        'json' => ['username' => $username]
-                    ]);
-                } catch (Exception $e) {
-                    // Log error if bot is down, but proceed with 403
-                }
+            // Try to insert invite; if exists, fetch current accept flag in one round-trip
+            $sql = "
+                WITH ins AS (
+                    INSERT INTO invites (username, accept)
+                    VALUES (:username, false)
+                    ON CONFLICT (username) DO NOTHING
+                    RETURNING accept
+                )
+                SELECT accept FROM ins
+                UNION ALL
+                SELECT accept FROM invites WHERE username = :username
+                LIMIT 1
+            ";
 
+            $accept = (bool) ($conn->fetchOne($sql, ['username' => $username]) ?? false);
+            if (!$accept) {
                 return new Response(null, 403);
             }
 
