@@ -1,0 +1,267 @@
+<?php
+
+namespace App\Controller;
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Routing\Attribute\Route;
+use Doctrine\ORM\EntityManagerInterface;
+
+use App\Entity\RoleType;
+use App\Entity\User;
+use App\Entity\Education;
+use App\Entity\Project;
+use App\Entity\Experience;
+use App\Entity\Certification;
+use App\Entity\Award;
+use function count;
+
+#[Route('/api')]
+final class BulkController extends AbstractController
+{
+    private function parseDate(?string $value): ?\DateTime
+    {
+        if (!$value) {
+            return null;
+        }
+
+        // YYYY-MM-DD
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return new \DateTime($value);
+        }
+
+        // YYYY-MM
+        if (preg_match('/^\d{4}-\d{2}$/', $value)) {
+            return new \DateTime($value . '-01');
+        }
+
+        // YYYY
+        if (preg_match('/^\d{4}$/', $value)) {
+            return new \DateTime($value . '-01-01');
+        }
+
+        throw new \InvalidArgumentException('Invalid date format: ' . $value);
+    }
+
+    #[Route('/bulk', name: 'app_bulk_import', methods: ['POST'])]
+    public function bulk(
+        Request $request,
+        EntityManagerInterface $em
+    ): JsonResponse {
+        /** @var User|null **/
+        $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            return new JsonResponse(['error' => 'Unauthorized'], 401);
+        }
+
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            return new JsonResponse(['error' => 'Invalid JSON'], 400);
+        }
+
+        /* ---------- USER ---------- */
+        if (!empty($payload['user'])) {
+            foreach ($payload['user'] as $key => $value) {
+                $setter = 'set' . ucfirst($key);
+                if (method_exists($user, $setter)) {
+                    $user->$setter($value);
+                }
+            }
+        }
+
+        /* ---------- EDUCATION ---------- */
+        if (!empty($payload['education']) && is_array($payload['education'])) {
+            $education = $em->getRepository(Education::class)
+                ->findOneBy(['user' => $user]) ?? new Education();
+
+            $education->setUser($user);
+
+            foreach ($payload['education'] as $key => $value) {
+                $setter = 'set' . ucfirst($key);
+                if (method_exists($education, $setter)) {
+                    $education->$setter($value);
+                }
+            }
+
+            $em->persist($education);
+        }
+
+        //calculate the skills array from projects
+        //format: skill => count
+        $skillCounts = [];
+
+        /* ---------- PROJECTS ---------- */
+        foreach ($payload['projects'] ?? [] as $item) {
+            $entity = new Project();
+            $entity->setUser($user);
+
+            foreach ($item as $key => $value) {
+
+                if ($key === 'role') {
+                    if (
+                        $value !== null &&
+                        !in_array($value, array_column(RoleType::cases(), 'value'), true)
+                    ) {
+                        return new JsonResponse(
+                            ['error' => 'Invalid role'],
+                            400
+                        );
+                    }
+
+                    $entity->setRole($value ? RoleType::from($value) : null);
+                    continue;
+                }
+
+                $setter = 'set' . ucfirst($key);
+                if (method_exists($entity, $setter)) {
+                    if (
+                        in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)
+                    ) {
+                        $entity->$setter($this->parseDate($value));
+                    } else {
+                        $entity->$setter($value);
+                    }
+                }
+
+                //count skills
+                if ($key === 'tech' && is_array($value)) {
+                    foreach ($value as $skill) {
+                        $skillLower = strtolower($skill);
+                        if (isset($skillCounts[$skillLower])) {
+                            $skillCounts[$skillLower]++;
+                        } else {
+                            $skillCounts[$skillLower] = 1;
+                        }
+                    }
+                }
+            }
+
+            $em->persist($entity);
+        }
+
+        /* ---------- EXPERIENCE ---------- */
+        foreach ($payload['experience'] ?? [] as $item) {
+            $entity = new Experience();
+            $entity->setUser($user);
+
+            foreach ($item as $key => $value) {
+
+                if ($key === 'role') {
+                    if (
+                        $value !== null &&
+                        !in_array($value, array_column(RoleType::cases(), 'value'), true)
+                    ) {
+                        return new JsonResponse(
+                            ['error' => 'Invalid role'],
+                            400
+                        );
+                    }
+
+                    $entity->setRole($value ? RoleType::from($value) : null);
+                    continue;
+                }
+
+                $setter = 'set' . ucfirst($key);
+                if (method_exists($entity, $setter)) {
+                    if (
+                        in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)
+                    ) {
+                        $entity->$setter($this->parseDate($value));
+                    } else {
+                        $entity->$setter($value);
+                    }
+                }
+            }
+
+            $em->persist($entity);
+        }
+
+        /* ---------- CERTIFICATIONS ---------- */
+        foreach ($payload['certifications'] ?? [] as $item) {
+            $entity = new Certification();
+            $entity->setUser($user);
+
+            foreach ($item as $key => $value) {
+
+                if ($key === 'role') {
+                    if (
+                        $value !== null &&
+                        !in_array($value, array_column(RoleType::cases(), 'value'), true)
+                    ) {
+                        return new JsonResponse(
+                            ['error' => 'Invalid role'],
+                            400
+                        );
+                    }
+
+                    $entity->setRole($value ? RoleType::from($value) : null);
+                    continue;
+                }
+
+                $setter = 'set' . ucfirst($key);
+                if (method_exists($entity, $setter)) {
+                    if (
+                        in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)
+                    ) {
+                        $entity->$setter($this->parseDate($value));
+                    } else {
+                        $entity->$setter($value);
+                    }
+                }
+            }
+
+            $em->persist($entity);
+        }
+
+        /* ---------- AWARDS ---------- */
+        foreach ($payload['awards'] ?? [] as $item) {
+            $entity = new Award();
+            $entity->setUser($user);
+
+            foreach ($item as $key => $value) {
+
+                if ($key === 'role') {
+                    if (
+                        $value !== null &&
+                        !in_array($value, array_column(RoleType::cases(), 'value'), true)
+                    ) {
+                        return new JsonResponse(
+                            ['error' => 'Invalid role'],
+                            400
+                        );
+                    }
+
+                    $entity->setRole($value ? RoleType::from($value) : null);
+                    continue;
+                }
+
+                $setter = 'set' . ucfirst($key);
+                if (method_exists($entity, $setter)) {
+                    if (
+                        in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)
+                    ) {
+                        $entity->$setter($this->parseDate($value));
+                    } else {
+                        $entity->$setter($value);
+                    }
+                }
+            }
+
+            $em->persist($entity);
+        }
+
+        //set counts
+        $user->setProjectsCount(count($payload['projects'] ?? []));
+        $user->setExperienceCount(count($payload['experience'] ?? []));
+        $user->setCertCount(count($payload['certifications'] ?? []));
+        $user->setAwardsCount(count($payload['awards'] ?? []));
+
+        $user->setSkills($skillCounts);
+        /* ---------- SINGLE FLUSH ---------- */
+        $em->flush();
+
+        return new JsonResponse(['ok' => true]);
+    }
+}
