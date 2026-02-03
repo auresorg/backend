@@ -31,6 +31,7 @@ final class CertificationController extends AbstractController
                 'platform' => $certification->getPlatform(),
                 'description' => $certification->getDescription(),
                 'url' => $certification->getUrl(),
+                'role' => $certification->getRole()?->value,
                 'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
             ];
         }
@@ -55,6 +56,7 @@ final class CertificationController extends AbstractController
             'platform' => $certification->getPlatform(),
             'description' => $certification->getDescription(),
             'url' => $certification->getUrl(),
+            'role' => $certification->getRole()?->value,
             'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
         ];
 
@@ -127,6 +129,7 @@ final class CertificationController extends AbstractController
             'platform' => $certification->getPlatform(),
             'description' => $certification->getDescription(),
             'url' => $certification->getUrl(),
+            'role' => $certification->getRole()?->value,
             'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
         ];
 
@@ -209,6 +212,7 @@ final class CertificationController extends AbstractController
             'platform' => $certification->getPlatform(),
             'description' => $certification->getDescription(),
             'url' => $certification->getUrl(),
+            'role' => $certification->getRole()?->value,
             'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
         ];
 
