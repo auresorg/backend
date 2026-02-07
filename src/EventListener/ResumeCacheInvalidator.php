@@ -51,12 +51,22 @@ class ResumeCacheInvalidator
         $ch = curl_init($this->serverlessUrl);
 
         curl_setopt_array($ch, [
+            CURLOPT_URL => $this->serverlessUrl,
             CURLOPT_POST => true,
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
             CURLOPT_POSTFIELDS => json_encode($payload),
+
             CURLOPT_RETURNTRANSFER => false,
-            CURLOPT_CONNECTTIMEOUT_MS => 200,
-            CURLOPT_TIMEOUT_MS => 200,
+            CURLOPT_HEADER => false,
+            CURLOPT_NOBODY => false,
+
+            CURLOPT_CONNECTTIMEOUT_MS => 1500,
+
+            CURLOPT_TIMEOUT_MS => 1500,
+
+            CURLOPT_FORBID_REUSE => true,
+            CURLOPT_FRESH_CONNECT => true,
+
             CURLOPT_NOSIGNAL => true,
         ]);
 
