@@ -9,6 +9,7 @@ use Doctrine\ORM\Events;
 use Doctrine\DBAL\Connection;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+
 #[AsDoctrineListener(event: Events::postPersist, priority: 500)]
 #[AsDoctrineListener(event: Events::postUpdate, priority: 500)]
 #[AsDoctrineListener(event: Events::preRemove, priority: 500)]
