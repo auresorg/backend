@@ -9,10 +9,9 @@ use Doctrine\ORM\Events;
 use Doctrine\DBAL\Connection;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-
-#[AsDoctrineListener(event: Events::postPersist, priority: 500)]
-#[AsDoctrineListener(event: Events::postUpdate, priority: 500)]
-#[AsDoctrineListener(event: Events::preRemove, priority: 500)]
+#[AsDoctrineListener(event: Events::postPersist, priority: 500, connection: 'default')]
+#[AsDoctrineListener(event: Events::postUpdate, priority: 500, connection: 'default')]
+#[AsDoctrineListener(event: Events::preRemove, priority: 500, connection: 'default')]
 class ResumeCacheInvalidator
 {
     private array $typeMap = [
@@ -22,14 +21,13 @@ class ResumeCacheInvalidator
         Award::class => 'award',
     ];
 
-    /** User fields that never trigger resumes */
     private array $ignoredUserFields = [
         'skills',
         'projectsCount',
         'certCount',
         'awardsCount',
         'experienceCount',
-        'projects',        // 🔑 collection side-effect
+        'projects',
         'experiences',
         'certifications',
         'awards',
@@ -40,6 +38,7 @@ class ResumeCacheInvalidator
         private Connection $db,
         private string $serverlessUrl
     ) {
+        error_log('[ResumeCache] constructed');
     }
 
     /* ----------------- HTTP ----------------- */
@@ -47,6 +46,8 @@ class ResumeCacheInvalidator
     private function fire(array $payload): void
     {
         $payload['_call_id'] = uniqid('php_', true);
+
+        error_log('[ResumeCache] FIRE start ' . json_encode($payload));
 
         $ch = curl_init($this->serverlessUrl);
 
@@ -61,22 +62,28 @@ class ResumeCacheInvalidator
             CURLOPT_NOBODY => false,
 
             CURLOPT_CONNECTTIMEOUT_MS => 1500,
-
             CURLOPT_TIMEOUT_MS => 1500,
 
             CURLOPT_FORBID_REUSE => true,
             CURLOPT_FRESH_CONNECT => true,
-
             CURLOPT_NOSIGNAL => true,
         ]);
 
-        curl_exec($ch);
+        $ok = curl_exec($ch);
+
+        if ($ok === false) {
+            error_log('[ResumeCache] CURL ERROR: ' . curl_error($ch));
+        } else {
+            error_log('[ResumeCache] CURL SENT');
+        }
+
         curl_close($ch);
     }
 
-
     private function triggerStandard(int $userId, string $username, string $role): void
     {
+        error_log("[ResumeCache] triggerStandard userId=$userId role=$role");
+
         $this->fire([
             'type' => 'standard',
             'userId' => $userId,
@@ -87,6 +94,8 @@ class ResumeCacheInvalidator
 
     private function triggerCustom(int $userId, string $type, int $entityId): void
     {
+        error_log("[ResumeCache] triggerCustom userId=$userId type=$type entityId=$entityId");
+
         $column = match ($type) {
             'project' => 'projects',
             'experience' => 'experiences',
@@ -94,17 +103,26 @@ class ResumeCacheInvalidator
             'award' => 'awards',
             default => null
         };
-        if (!$column)
+
+        if (!$column) {
+            error_log('[ResumeCache] triggerCustom skipped (no column)');
             return;
+        }
 
         $sql = "SELECT slug FROM cusres
                 WHERE user_id = :uid
                 AND $column::jsonb @> :id::jsonb";
 
-        foreach ($this->db->fetchAllAssociative($sql, [
+        $rows = $this->db->fetchAllAssociative($sql, [
             'uid' => $userId,
             'id' => json_encode([$entityId]),
-        ]) as $row) {
+        ]);
+
+        error_log('[ResumeCache] triggerCustom rows=' . count($rows));
+
+        foreach ($rows as $row) {
+            error_log('[ResumeCache] triggerCustom firing slug=' . $row['slug']);
+
             $this->fire([
                 'type' => 'custom',
                 'userId' => $userId,
@@ -115,14 +133,24 @@ class ResumeCacheInvalidator
 
     private function triggerContentRoles(User $user): void
     {
+        error_log('[ResumeCache] triggerContentRoles userId=' . $user->getId());
+
         $sql = "
             SELECT role FROM resumes
             WHERE user_id = :id
             AND (projects + certificates + awards + experience) > 0
         ";
 
-        foreach ($this->db->fetchAllAssociative($sql, ['id' => $user->getId()]) as $row) {
-            $this->triggerStandard($user->getId(), $user->getUsername(), $row['role']);
+        $rows = $this->db->fetchAllAssociative($sql, ['id' => $user->getId()]);
+
+        error_log('[ResumeCache] triggerContentRoles rows=' . count($rows));
+
+        foreach ($rows as $row) {
+            $this->triggerStandard(
+                $user->getId(),
+                $user->getUsername(),
+                $row['role']
+            );
         }
     }
 
@@ -130,69 +158,87 @@ class ResumeCacheInvalidator
 
     public function postPersist(PostPersistEventArgs $e): void
     {
+        error_log('[ResumeCache] postPersist ' . get_class($e->getObject()));
         $this->handleDomainEntity($e->getObject(), null);
     }
 
     public function preRemove(PreRemoveEventArgs $e): void
     {
+        error_log('[ResumeCache] preRemove ' . get_class($e->getObject()));
         $this->handleDomainEntity($e->getObject(), null);
     }
 
     public function postUpdate(PostUpdateEventArgs $e): void
     {
         $entity = $e->getObject();
+
+        error_log('[ResumeCache] postUpdate ' . get_class($entity));
+
         $uow = $e->getObjectManager()->getUnitOfWork();
         $changeSet = $uow->getEntityChangeSet($entity);
 
-        /* ---- USER ---- */
-        if ($entity instanceof User) {
+        error_log('[ResumeCache] changeset ' . json_encode(array_keys($changeSet)));
 
-            // 🔥 If ANY domain entity is also updated, ignore User completely
+        if ($entity instanceof User) {
+            error_log('[ResumeCache] handling User');
+
             foreach ($uow->getScheduledEntityUpdates() as $updated) {
                 if (isset($this->typeMap[$updated::class])) {
+                    error_log('[ResumeCache] User skipped (domain update present)');
                     return;
                 }
             }
 
-            $changed = array_keys($changeSet);
-            $meaningful = array_diff($changed, $this->ignoredUserFields);
+            $meaningful = array_diff(array_keys($changeSet), $this->ignoredUserFields);
 
-            if (empty($meaningful))
+            if (!$meaningful) {
+                error_log('[ResumeCache] User skipped (no meaningful fields)');
                 return;
+            }
 
             $this->triggerContentRoles($entity);
             return;
         }
 
-        /* ---- EDUCATION ---- */
         if ($entity instanceof Education) {
+            error_log('[ResumeCache] handling Education');
             $this->triggerContentRoles($entity->getUser());
             return;
         }
 
-        /* ---- DOMAIN ENTITIES ---- */
         $oldRole = $changeSet['role'][0] ?? null;
         $this->handleDomainEntity($entity, $oldRole);
     }
 
     private function handleDomainEntity(object $entity, ?string $oldRole): void
     {
-        if (!isset($this->typeMap[$entity::class]))
+        error_log('[ResumeCache] handleDomainEntity ' . get_class($entity));
+
+        if (!isset($this->typeMap[$entity::class])) {
+            error_log('[ResumeCache] not domain entity');
             return;
+        }
 
         $user = $entity->getUser();
-        if (!$user || !$entity->getId())
+
+        if (!$user || !$entity->getId()) {
+            error_log('[ResumeCache] missing user or id');
             return;
+        }
 
         if ($oldRole) {
+            error_log('[ResumeCache] oldRole=' . $oldRole);
             $this->triggerStandard($user->getId(), $user->getUsername(), $oldRole);
         }
 
         if (method_exists($entity, 'getRole') && $role = $entity->getRole()) {
+            $val = $role instanceof \BackedEnum ? $role->value : $role;
+            error_log('[ResumeCache] newRole=' . $val);
+
             $this->triggerStandard(
                 $user->getId(),
                 $user->getUsername(),
-                $role instanceof \BackedEnum ? $role->value : $role
+                $val
             );
         }
 
@@ -201,5 +247,11 @@ class ResumeCacheInvalidator
             $this->typeMap[$entity::class],
             $entity->getId()
         );
+    }
+
+    // REQUIRED to avoid Doctrine fatal
+    public function postRemove(): void
+    {
+        error_log('[ResumeCache] postRemove noop');
     }
 }
