@@ -191,16 +191,15 @@ final class AuthController extends AbstractController
             $roles = ['frontend', 'backend', 'fullstack', 'devops', 'mobile', 'aiml', 'product', 'qa', 'designer', 'blockchain'];
             $conn = $this->em->getConnection();
 
-            $sql = "INSERT INTO resumes (user_id, username, role, data_updated_at) VALUES ";
+            $sql = "INSERT INTO resumes (user_id, username, role) VALUES ";
             $params = [
                 'uid' => $user->getId(),
                 'uname' => $user->getUsername(),
-                'now' => (new \DateTime())->format('Y-m-d H:i:s')
             ];
             $values = [];
 
             foreach ($roles as $i => $role) {
-                $values[] = "(:uid, :uname, :r$i, :now)";
+                $values[] = "(:uid, :uname, :r$i)";
                 $params["r$i"] = $role;
             }
 

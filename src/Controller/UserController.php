@@ -146,7 +146,7 @@ class UserController extends AbstractController
         $conn = $this->em->getConnection();
         
         $sql = "
-            SELECT role, compiled_at, projects, certificates, awards, experience 
+            SELECT role, projects, certificates, awards, experience 
             FROM resumes 
             WHERE user_id = :uid
         ";
@@ -156,7 +156,6 @@ class UserController extends AbstractController
         $data = array_map(function ($row) {
             return [
                 'role' => $row['role'],
-                'last_compiled' => $row['compiled_at'],
                 'stats' => [
                     'projects' => $row['projects'],
                     'certificates' => $row['certificates'],
