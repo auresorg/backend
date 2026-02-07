@@ -139,12 +139,33 @@ final class AuthController extends AbstractController
             if ($count == 0) {
 
                 try {
+                    $token = $_ENV['TELEGRAM_BOT_TOKEN'];
+                    $adminId = $_ENV['ADMIN_TELEGRAM_ID'];
+
+                    $message = sprintf(
+                        "New signup needs invite\n\nUsername: %s\nEmail: %s\n\nReview:\nhttps://aures.dev/administratorcontrol",
+                        $username,
+                        $email
+                    );
+
                     $client = HttpClient::create();
-                    $client->request('POST', 'https://premise.vishok.me/tg/auresadm/inv', [
-                        'json' => ['username' => $username]
+                    $client->request('POST', "https://api.telegram.org/bot{$token}/sendMessage", [
+                        'json' => [
+                            'chat_id' => $adminId,
+                            'text' => $message,
+                            'disable_web_page_preview' => true
+                        ]
                     ]);
                 } catch (Exception $e) {
                     // Log error if bot is down, but proceed with 403
+                }
+
+                try {
+                    $sql = "INSERT INTO invites (username, accept) VALUES (:username, false)";
+                    $stmt = $conn->prepare($sql);
+                    $stmt->executeQuery(['username' => $username]);
+                } catch (Exception $e) {
+                    return new Response(null, 500);
                 }
 
                 return new Response(null, 403);
