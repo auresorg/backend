@@ -61,8 +61,8 @@ class ResumeCacheInvalidator
             CURLOPT_HEADER => false,
             CURLOPT_NOBODY => false,
 
-            CURLOPT_CONNECTTIMEOUT_MS => 1500,
-            CURLOPT_TIMEOUT_MS => 1500,
+            CURLOPT_CONNECTTIMEOUT_MS => 200,
+            CURLOPT_TIMEOUT_MS => 200,
 
             CURLOPT_FORBID_REUSE => true,
             CURLOPT_FRESH_CONNECT => true,
