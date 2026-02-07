@@ -73,19 +73,78 @@ final class BulkController extends AbstractController
 
         /* ---------- EDUCATION ---------- */
         if (!empty($payload['education']) && is_array($payload['education'])) {
-            $education = $em->getRepository(Education::class)
-                ->findOneBy(['user' => $user]) ?? new Education();
 
-            $education->setUser($user);
+            // helper: normalize frontend date string → DateTime or null
+            $parseDate = function (?string $value): ?\DateTimeInterface {
+                if (!$value) {
+                    return null;
+                }
 
-            foreach ($payload['education'] as $key => $value) {
-                $setter = 'set' . ucfirst($key);
-                if (method_exists($education, $setter)) {
-                    $education->$setter($value);
+                // YYYY
+                if (preg_match('/^\d{4}$/', $value)) {
+                    return \DateTime::createFromFormat('Y-m', $value . '-01');
+                }
+
+                // YYYY-MM or YYYY-MM-DD → cut to YYYY-MM
+                if (preg_match('/^\d{4}-\d{2}/', $value)) {
+                    return \DateTime::createFromFormat('Y-m', substr($value, 0, 7));
+                }
+
+                return null;
+            };
+
+            $best = null;
+
+            foreach ($payload['education'] as $edu) {
+                if (empty($edu['startDate']) || empty($edu['endDate'])) {
+                    continue;
+                }
+
+                $start = $parseDate($edu['startDate']);
+                $end   = $parseDate($edu['endDate']);
+
+                if (!$start || !$end) {
+                    continue;
+                }
+
+                $duration = $start->diff($end)->days;
+                $grade = isset($edu['grade']) ? (float) $edu['grade'] : 0.0;
+
+                if (
+                    $best === null ||
+                    $duration > $best['duration'] ||
+                    ($duration === $best['duration'] && $grade > $best['grade'])
+                ) {
+                    $best = [
+                        'data' => $edu,
+                        'duration' => $duration,
+                        'grade' => $grade
+                    ];
                 }
             }
 
-            $em->persist($education);
+            if ($best !== null) {
+                $education = $em->getRepository(Education::class)
+                    ->findOneBy(['user' => $user]) ?? new Education();
+
+                $education->setUser($user);
+
+                foreach ($best['data'] as $key => $value) {
+                    $setter = 'set' . ucfirst($key);
+
+                    if (!method_exists($education, $setter)) {
+                        continue;
+                    }
+
+                    if (in_array($key, ['startDate', 'endDate'], true)) {
+                        $education->$setter($parseDate($value));
+                    } else {
+                        $education->$setter($value);
+                    }
+                }
+
+                $em->persist($education);
+            }
         }
 
         //calculate the skills array from projects
