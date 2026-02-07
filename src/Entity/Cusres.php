@@ -36,17 +36,6 @@ class Cusres
     #[ORM\Column(type: 'json', options: ['default' => '[]'])]
     private array $experiences = [];
 
-    #[ORM\Column(type: 'datetime_immutable')]
-    private \DateTimeImmutable $dataUpdatedAt;
-
-    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
-    private ?\DateTimeImmutable $compiledAt = null;
-
-    public function __construct()
-    {
-        $this->dataUpdatedAt = new \DateTimeImmutable();
-    }
-
     public function getId(): ?int
     {
         return $this->id;
@@ -118,28 +107,6 @@ class Cusres
     public function setExperiences(array $experiences): self
     {
         $this->experiences = $experiences;
-        return $this;
-    }
-
-    public function getDataUpdatedAt(): \DateTimeImmutable
-    {
-        return $this->dataUpdatedAt;
-    }
-
-    public function touchDataUpdatedAt(): self
-    {
-        $this->dataUpdatedAt = new \DateTimeImmutable();
-        return $this;
-    }
-
-    public function getCompiledAt(): ?\DateTimeImmutable
-    {
-        return $this->compiledAt;
-    }
-
-    public function setCompiledAt(?\DateTimeImmutable $compiledAt): self
-    {
-        $this->compiledAt = $compiledAt;
         return $this;
     }
 }

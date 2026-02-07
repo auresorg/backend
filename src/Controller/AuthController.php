@@ -132,23 +132,42 @@ final class AuthController extends AbstractController
 
         if (!$user) {
             $conn = $this->em->getConnection();
+            $sql = "SELECT COUNT(*) AS cnt FROM invites WHERE username = :username";
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->executeQuery(['username' => $username]);
+            $count = $result->fetchAssociative()['cnt'] ?? 0;
+            if ($count == 0) {
 
-            // Try to insert invite; if exists, fetch current accept flag in one round-trip
-            $sql = "
-                WITH ins AS (
-                    INSERT INTO invites (username, accept)
-                    VALUES (:username, false)
-                    ON CONFLICT (username) DO NOTHING
-                    RETURNING accept
-                )
-                SELECT accept FROM ins
-                UNION ALL
-                SELECT accept FROM invites WHERE username = :username
-                LIMIT 1
-            ";
+                try {
+                    $token = $_ENV['TELEGRAM_BOT_TOKEN'];
+                    $adminId = $_ENV['ADMIN_TELEGRAM_ID'];
 
-            $accept = (bool) ($conn->fetchOne($sql, ['username' => $username]) ?? false);
-            if (!$accept) {
+                    $message = sprintf(
+                        "New signup needs invite\n\nUsername: %s\nEmail: %s\n\nReview:\nhttps://aures.dev/administratorcontrol",
+                        $username,
+                        $email
+                    );
+
+                    $client = HttpClient::create();
+                    $client->request('POST', "https://api.telegram.org/bot{$token}/sendMessage", [
+                        'json' => [
+                            'chat_id' => $adminId,
+                            'text' => $message,
+                            'disable_web_page_preview' => true
+                        ]
+                    ]);
+                } catch (Exception $e) {
+                    // Log error if bot is down, but proceed with 403
+                }
+
+                try {
+                    $sql = "INSERT INTO invites (username, accept) VALUES (:username, false)";
+                    $stmt = $conn->prepare($sql);
+                    $stmt->executeQuery(['username' => $username]);
+                } catch (Exception $e) {
+                    return new Response(null, 500);
+                }
+
                 return new Response(null, 403);
             }
 
@@ -172,16 +191,15 @@ final class AuthController extends AbstractController
             $roles = ['frontend', 'backend', 'fullstack', 'devops', 'mobile', 'aiml', 'product', 'qa', 'designer', 'blockchain'];
             $conn = $this->em->getConnection();
 
-            $sql = "INSERT INTO resumes (user_id, username, role, data_updated_at) VALUES ";
+            $sql = "INSERT INTO resumes (user_id, username, role) VALUES ";
             $params = [
                 'uid' => $user->getId(),
                 'uname' => $user->getUsername(),
-                'now' => (new \DateTime())->format('Y-m-d H:i:s')
             ];
             $values = [];
 
             foreach ($roles as $i => $role) {
-                $values[] = "(:uid, :uname, :r$i, :now)";
+                $values[] = "(:uid, :uname, :r$i)";
                 $params["r$i"] = $role;
             }
 
