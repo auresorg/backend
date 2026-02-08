@@ -11,11 +11,19 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use App\Service\ResumeCacheInvalidatorHelper;
 
 #[Route('/api/certifications')]
 #[IsGranted('ROLE_USER')]
 final class CertificationController extends AbstractController
 {
+    private ResumeCacheInvalidatorHelper $cache;
+
+    public function __construct(ResumeCacheInvalidatorHelper $cache)
+    {
+        $this->cache = $cache;
+    }
+
     #[Route('', name: 'api_certifications_index', methods: ['GET'])]
     public function index(): Response
     {
@@ -133,7 +141,19 @@ final class CertificationController extends AbstractController
             'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
         ];
 
-        return $this->json($certificationData, Response::HTTP_CREATED);
+        $response = $this->json($certificationData, Response::HTTP_CREATED);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateStandard(
+            $user->getId(),
+            $user->getUsername(),
+            $role
+        );
+
+        return $response;
     }
 
     #[Route('/{id}', name: 'api_certifications_update', methods: ['PUT', 'PATCH'])]
@@ -146,6 +166,8 @@ final class CertificationController extends AbstractController
         if (!$certification || $certification->getUser() !== $user) {
             return $this->json(['error' => 'Certification not found'], Response::HTTP_NOT_FOUND);
         }
+
+        $oldRole = $certification->getRole()?->value;
 
         $data = json_decode($request->getContent(), true);
         $errors = [];
@@ -216,7 +238,22 @@ final class CertificationController extends AbstractController
             'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
         ];
 
-        return $this->json($certificationData, Response::HTTP_OK);
+        $response = $this->json($certificationData, Response::HTTP_OK);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateAfterEntityUpdate(
+            $user->getId(),
+            $user->getUsername(),
+            $oldRole,
+            $role,
+            'certifications',
+            $certification->getId()
+        );
+
+        return $response;
     }
 
     #[Route('/{id}', name: 'api_certifications_delete', methods: ['DELETE'])]
@@ -237,6 +274,21 @@ final class CertificationController extends AbstractController
 
         $entityManager->flush();
 
-        return $this->json(null, Response::HTTP_NO_CONTENT);
+        $response = $this->json(null, Response::HTTP_NO_CONTENT);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateAfterEntityUpdate(
+            $user->getId(),
+            $user->getUsername(),
+            null,
+            $certification->getRole()?->value,
+            'certifications',
+            $certification->getId()
+        );
+
+        return $response;
     }
 }

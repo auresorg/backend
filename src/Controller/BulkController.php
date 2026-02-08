@@ -7,7 +7,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\ORM\EntityManagerInterface;
-
+use App\Service\ResumeCacheInvalidatorHelper;
 use App\Entity\RoleType;
 use App\Entity\User;
 use App\Entity\Education;
@@ -16,10 +16,18 @@ use App\Entity\Experience;
 use App\Entity\Certification;
 use App\Entity\Award;
 use function count;
+use function in_array;
 
 #[Route('/api')]
 final class BulkController extends AbstractController
 {
+    private ResumeCacheInvalidatorHelper $cache;
+
+    public function __construct(ResumeCacheInvalidatorHelper $cache)
+    {
+        $this->cache = $cache;
+    }
+
     private function parseDate(?string $value): ?\DateTime
     {
         if (!$value) {
@@ -147,6 +155,8 @@ final class BulkController extends AbstractController
             }
         }
 
+        $roles = [];
+
         //calculate the skills array from projects
         //format: skill => count
         $skillCounts = [];
@@ -170,6 +180,11 @@ final class BulkController extends AbstractController
                     }
 
                     $entity->setRole($value ? RoleType::from($value) : null);
+
+                    //if it is not in the roles array, add it
+                    if ($value && !in_array($value, $roles, true)) {
+                        $roles[] = $value;
+                    }
                     continue;
                 }
 
@@ -218,6 +233,10 @@ final class BulkController extends AbstractController
                         );
                     }
 
+                    if ($value && !in_array($value, $roles, true)) {
+                        $roles[] = $value;
+                    }
+
                     $entity->setRole($value ? RoleType::from($value) : null);
                     continue;
                 }
@@ -253,6 +272,10 @@ final class BulkController extends AbstractController
                             ['error' => 'Invalid role'],
                             400
                         );
+                    }
+
+                    if ($value && !in_array($value, $roles, true)) {
+                        $roles[] = $value;
                     }
 
                     $entity->setRole($value ? RoleType::from($value) : null);
@@ -292,6 +315,10 @@ final class BulkController extends AbstractController
                         );
                     }
 
+                    if ($value && !in_array($value, $roles, true)) {
+                        $roles[] = $value;
+                    }
+
                     $entity->setRole($value ? RoleType::from($value) : null);
                     continue;
                 }
@@ -321,6 +348,20 @@ final class BulkController extends AbstractController
         /* ---------- SINGLE FLUSH ---------- */
         $em->flush();
 
-        return new JsonResponse(['ok' => true]);
+        $response = new JsonResponse(['ok' => true]);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+        // Invalidate cache after successful update, for each role the user has in the updated entities
+        foreach ($roles as $role) {
+            $this->cache->invalidateStandard(
+                $user->getId(),
+                $user->getUsername(),
+                $role
+            );
+        }
+
+        return $response;
     }
 }
