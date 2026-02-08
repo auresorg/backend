@@ -150,11 +150,11 @@ class UserController extends AbstractController
             FROM resumes 
             WHERE user_id = :uid
         ";
-        
         $rows = $conn->executeQuery($sql, ['uid' => $user->getId()])->fetchAllAssociative();
 
-        $data = array_map(function ($row) {
+        $data = array_map(function ($row) use ($user) {
             return [
+                'username' => $user->getUsername(),
                 'role' => $row['role'],
                 'stats' => [
                     'projects' => $row['projects'],

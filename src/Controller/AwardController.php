@@ -13,12 +13,19 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use App\Service\ResumeCacheInvalidatorHelper;
 
 #[Route('/api/awards')]
 #[IsGranted('ROLE_USER')]
 final class AwardController extends AbstractController
 {
     private const AWARD_TYPES = ['first', 'second', 'third', 'fourth', 'participation'];
+    private ResumeCacheInvalidatorHelper $cache;
+
+    public function __construct(ResumeCacheInvalidatorHelper $cache)
+    {
+        $this->cache = $cache;
+    }
 
     #[Route('', name: 'api_awards_index', methods: ['GET'])]
     public function index(): Response
@@ -137,7 +144,19 @@ final class AwardController extends AbstractController
             'role' => $award->getRole()?->value,
         ];
 
-        return $this->json($awardData, Response::HTTP_CREATED);
+        $response = $this->json($awardData, Response::HTTP_CREATED);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateStandard(
+            $user->getId(),
+            $user->getUsername(),
+            $role
+        );
+
+        return $response;
     }
 
     #[Route('/{id}', name: 'api_awards_update', methods: ['PUT', 'PATCH'])]
@@ -150,6 +169,8 @@ final class AwardController extends AbstractController
         if (!$award || $award->getUser() !== $user) {
             return $this->json(['error' => 'Award not found'], Response::HTTP_NOT_FOUND);
         }
+
+        $oldRole = $award->getRole()?->value;
 
         $data = json_decode($request->getContent(), true);
         $errors = [];
@@ -224,7 +245,22 @@ final class AwardController extends AbstractController
             'role' => $award->getRole()?->value,
         ];
 
-        return $this->json($awardData, Response::HTTP_OK);
+        $response = $this->json($awardData, Response::HTTP_OK);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateAfterEntityUpdate(
+            $user->getId(),
+            $user->getUsername(),
+            $oldRole,
+            $role,
+            'awards',
+            $award->getId()
+        );
+
+        return $response;
     }
 
     #[Route('/{id}', name: 'api_awards_delete', methods: ['DELETE'])]
@@ -245,6 +281,21 @@ final class AwardController extends AbstractController
 
         $entityManager->flush();
 
-        return $this->json(null, Response::HTTP_NO_CONTENT);
+        $response = $this->json(null, Response::HTTP_NO_CONTENT);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateAfterEntityUpdate(
+            $user->getId(),
+            $user->getUsername(),
+            null,
+            $award->getRole()?->value,
+            'awards',
+            $award->getId()
+        );
+
+        return $response;
     }
 }

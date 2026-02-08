@@ -12,11 +12,19 @@ use Symfony\Component\HttpFoundation\{JsonResponse, Request};
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use function is_array;
+use App\Service\ResumeCacheInvalidatorHelper;
 
 #[Route('/api/cusres')]
 #[IsGranted('ROLE_USER')]
 final class CusresController extends AbstractController
 {
+    private ResumeCacheInvalidatorHelper $cache;
+
+    public function __construct(ResumeCacheInvalidatorHelper $cache)
+    {
+        $this->cache = $cache;
+    }
+
     /* ---------------------------------------------------- */
     /* LIST */
     /* ---------------------------------------------------- */
@@ -96,10 +104,21 @@ final class CusresController extends AbstractController
             return $this->json(['error' => 'Slug already exists'], 409);
         }
 
-        return $this->json([
+        $response = $this->json([
             'id' => $c->getId(),
             'slug' => $c->getSlug(),
         ], 201);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateCustom(
+            $u->getId(),
+            $c->getSlug()
+        );
+
+        return $response;
     }
 
     /* ---------------------------------------------------- */

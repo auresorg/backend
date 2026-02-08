@@ -13,11 +13,19 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use App\Service\ResumeCacheInvalidatorHelper;
 
 #[Route('/api/experiences')]
 #[IsGranted('ROLE_USER')]
 final class ExperienceController extends AbstractController
 {
+    private ResumeCacheInvalidatorHelper $cache;
+
+    public function __construct(ResumeCacheInvalidatorHelper $cache)
+    {
+        $this->cache = $cache;
+    }
+
     #[Route('', name: 'api_experiences_index', methods: ['GET'])]
     public function index(): Response
     {
@@ -86,7 +94,19 @@ final class ExperienceController extends AbstractController
 
         $em->flush();
 
-        return $this->json(['id' => $exp->getId()], 201);
+        $response = $this->json(['id' => $exp->getId()], 201);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateStandard(
+            $user->getId(),
+            $user->getUsername(),
+            $role
+        );
+
+        return $response;
     }
 
     #[Route('/{id}', name: 'api_experiences_update', methods: ['PUT', 'PATCH'])]
@@ -95,6 +115,8 @@ final class ExperienceController extends AbstractController
         /** @var User $user */ $user = $this->getUser();
         $exp = $em->getRepository(Experience::class)->find($id);
         if (!$exp || $exp->getUser() !== $user) return $this->json(['error' => 'Not found'], 404);
+
+        $oldRole = $exp->getRole()?->value;
 
         $data = json_decode($request->getContent(), true);
         $errors = [];
@@ -133,7 +155,22 @@ final class ExperienceController extends AbstractController
 
         $em->flush();
 
-        return $this->json(['updated'=>true]);
+        $response = $this->json(['updated'=>true]);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateAfterEntityUpdate(
+            $user->getId(),
+            $user->getUsername(),
+            $oldRole,
+            $exp->getRole()?->value,
+            'experiences',
+            $exp->getId()
+        );
+
+        return $response;
     }
 
     #[Route('/{id}', name: 'api_experiences_delete', methods: ['DELETE'])]
@@ -148,6 +185,21 @@ final class ExperienceController extends AbstractController
         $em->persist($user);
         $em->flush();
 
-        return $this->json(null,204);
+        $response = $this->json(null,204);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateAfterEntityUpdate(
+            $user->getId(),
+            $user->getUsername(),
+            null,
+            $exp->getRole()?->value,
+            'experiences',
+            $exp->getId()
+        );
+
+        return $response;
     }
 }

@@ -8,16 +8,23 @@ use App\Entity\User;
 use App\Repository\ProjectRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use App\Service\ResumeCacheInvalidatorHelper;
 
 #[Route('/api/projects')]
 #[IsGranted('ROLE_USER')]
 final class ProjectController extends AbstractController
 {
+    private ResumeCacheInvalidatorHelper $cache;
+
+    public function __construct(ResumeCacheInvalidatorHelper $cache)
+    {
+        $this->cache = $cache;
+    }
+
     private function normalizeUrl(string $url): string
     {
         $url = trim($url);
@@ -136,7 +143,7 @@ final class ProjectController extends AbstractController
 
         $entityManager->flush();
 
-        return $this->json([
+        $response = $this->json([
             'id' => $project->getId(),
             'name' => $project->getName(),
             'repo' => $project->getRepo(),
@@ -147,6 +154,18 @@ final class ProjectController extends AbstractController
             'startDate' => $project->getStartDate()->format('Y-m-d'),
             'endDate' => $project->getEndDate()?->format('Y-m-d')
         ], Response::HTTP_CREATED);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateStandard(
+            $user->getId(),
+            $user->getUsername(),
+            $role       
+        );
+
+        return $response;
     }
 
     #[Route('/{id}', name: 'api_project_edit', methods: ['PUT', 'PATCH'])]
@@ -162,6 +181,9 @@ final class ProjectController extends AbstractController
         }
 
         $data = json_decode($request->getContent(), true);
+
+        $oldRole = $project->getRole()?->value;
+
         if (isset($data['name'])) {
             $project->setName($data['name']);
         }
@@ -240,7 +262,22 @@ final class ProjectController extends AbstractController
 
         $entityManager->flush();
 
-        return $this->json(null, Response::HTTP_OK);
+        $response = $this->json(null, Response::HTTP_OK);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateAfterEntityUpdate(
+            $user->getId(),
+            $user->getUsername(),
+            $oldRole,
+            $project->getRole()?->value,
+            'projects',
+            $project->getId()
+        );
+
+        return $response;
     }
 
     #[Route('/{id}', name: 'api_project_delete', methods: ['DELETE'])]
@@ -262,6 +299,21 @@ final class ProjectController extends AbstractController
 
         $entityManager->flush();
 
-        return $this->json(null, Response::HTTP_NO_CONTENT);
+        $response = $this->json(null, Response::HTTP_NO_CONTENT);
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        $this->cache->invalidateAfterEntityUpdate(
+            $user->getId(),
+            $user->getUsername(),
+            null,
+            $project->getRole()?->value,
+            'projects',
+            $project->getId()
+        );
+
+        return $response;
     }
 }
