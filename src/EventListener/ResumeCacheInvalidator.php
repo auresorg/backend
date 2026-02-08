@@ -9,6 +9,7 @@ use Doctrine\ORM\Events;
 use Doctrine\DBAL\Connection;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+//TODO: MUST INCLUDE connection: 'default' WHEN PUSHING TO PRODUCTION, OTHERWISE IT WILL NOT WORK IN PRODUCTION ENVIRONMENT
 #[AsDoctrineListener(event: Events::postPersist, priority: 500, connection: 'default')]
 #[AsDoctrineListener(event: Events::postUpdate, priority: 500, connection: 'default')]
 #[AsDoctrineListener(event: Events::preRemove, priority: 500, connection: 'default')]
