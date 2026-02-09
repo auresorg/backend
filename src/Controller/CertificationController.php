@@ -141,19 +141,13 @@ final class CertificationController extends AbstractController
             'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
         ];
 
-        $response = $this->json($certificationData, Response::HTTP_CREATED);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
-
         $this->cache->invalidateStandard(
             $user->getId(),
             $user->getUsername(),
             $role
         );
 
-        return $response;
+        return $this->json($certificationData, Response::HTTP_CREATED);
     }
 
     #[Route('/{id}', name: 'api_certifications_update', methods: ['PUT', 'PATCH'])]
@@ -238,12 +232,6 @@ final class CertificationController extends AbstractController
             'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
         ];
 
-        $response = $this->json($certificationData, Response::HTTP_OK);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
-
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
             $user->getUsername(),
@@ -253,7 +241,7 @@ final class CertificationController extends AbstractController
             $certification->getId()
         );
 
-        return $response;
+        return $this->json($certificationData, Response::HTTP_OK);
     }
 
     #[Route('/{id}', name: 'api_certifications_delete', methods: ['DELETE'])]
@@ -274,12 +262,6 @@ final class CertificationController extends AbstractController
 
         $entityManager->flush();
 
-        $response = $this->json(null, Response::HTTP_NO_CONTENT);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
-
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
             $user->getUsername(),
@@ -289,6 +271,6 @@ final class CertificationController extends AbstractController
             $certification->getId()
         );
 
-        return $response;
+        return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 }

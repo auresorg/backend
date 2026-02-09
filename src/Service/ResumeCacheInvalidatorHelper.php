@@ -9,13 +9,15 @@ final class ResumeCacheInvalidatorHelper
 {
     private string $serverlessUrl;
 
-    public function __construct(private Connection $db) {
+    public function __construct(private Connection $db)
+    {
         $this->serverlessUrl = $_ENV['SERVERLESS_URL']
             ?? $_SERVER['SERVERLESS_URL']
             ?? throw new \RuntimeException('SERVERLESS_URL not set');
     }
 
-    public function invalidateStandard(int $userId, string $username, string $role): void {
+    public function invalidateStandard(int $userId, string $username, string $role): void
+    {
         $this->fire([
             'type' => 'standard',
             'userId' => $userId,
@@ -24,7 +26,8 @@ final class ResumeCacheInvalidatorHelper
         ]);
     }
 
-    public function invalidateCustom(int $userId, string $slug): void {
+    public function invalidateCustom(int $userId, string $slug): void
+    {
         $this->fire([
             'type' => 'custom',
             'userId' => $userId,
@@ -38,7 +41,8 @@ final class ResumeCacheInvalidatorHelper
      * $entityColumn must be one of:
      *  projects | experiences | certifications | awards
      */
-    public function invalidateAfterEntityUpdate(int $userId, string $username, ?string $oldRole, ?string $newRole, string $entityColumn, int $entityId): void {
+    public function invalidateAfterEntityUpdate(int $userId, string $username, ?string $oldRole, ?string $newRole, string $entityColumn, int $entityId): void
+    {
         if ($oldRole && $oldRole !== $newRole) {
             $this->invalidateStandard($userId, $username, $oldRole);
         }
@@ -77,7 +81,6 @@ final class ResumeCacheInvalidatorHelper
 
     private function fire(array $payload): void
     {
-
         $payload['_call_id'] = uniqid('php_', true);
 
         $ch = curl_init($this->serverlessUrl);
@@ -86,9 +89,12 @@ final class ResumeCacheInvalidatorHelper
             CURLOPT_POST => true,
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
             CURLOPT_POSTFIELDS => json_encode($payload),
-            CURLOPT_RETURNTRANSFER => false,
-            CURLOPT_CONNECTTIMEOUT_MS => 1200,
-            CURLOPT_TIMEOUT_MS => 1200,
+
+            CURLOPT_RETURNTRANSFER => true,
+
+            CURLOPT_CONNECTTIMEOUT_MS => 300,
+            CURLOPT_TIMEOUT_MS => 300,
+
             CURLOPT_FORBID_REUSE => true,
             CURLOPT_FRESH_CONNECT => true,
             CURLOPT_NOSIGNAL => true,
@@ -97,4 +103,5 @@ final class ResumeCacheInvalidatorHelper
         curl_exec($ch);
         curl_close($ch);
     }
+
 }

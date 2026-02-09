@@ -143,7 +143,13 @@ final class ProjectController extends AbstractController
 
         $entityManager->flush();
 
-        $response = $this->json([
+        $this->cache->invalidateStandard(
+            $user->getId(),
+            $user->getUsername(),
+            $role       
+        );
+
+        return $this->json([
             'id' => $project->getId(),
             'name' => $project->getName(),
             'repo' => $project->getRepo(),
@@ -154,18 +160,6 @@ final class ProjectController extends AbstractController
             'startDate' => $project->getStartDate()->format('Y-m-d'),
             'endDate' => $project->getEndDate()?->format('Y-m-d')
         ], Response::HTTP_CREATED);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
-
-        $this->cache->invalidateStandard(
-            $user->getId(),
-            $user->getUsername(),
-            $role       
-        );
-
-        return $response;
     }
 
     #[Route('/{id}', name: 'api_project_edit', methods: ['PUT', 'PATCH'])]
@@ -262,12 +256,6 @@ final class ProjectController extends AbstractController
 
         $entityManager->flush();
 
-        $response = $this->json(null, Response::HTTP_OK);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
-
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
             $user->getUsername(),
@@ -277,7 +265,7 @@ final class ProjectController extends AbstractController
             $project->getId()
         );
 
-        return $response;
+        return $this->json(null, Response::HTTP_OK);;
     }
 
     #[Route('/{id}', name: 'api_project_delete', methods: ['DELETE'])]
@@ -299,12 +287,6 @@ final class ProjectController extends AbstractController
 
         $entityManager->flush();
 
-        $response = $this->json(null, Response::HTTP_NO_CONTENT);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
-
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
             $user->getUsername(),
@@ -314,6 +296,6 @@ final class ProjectController extends AbstractController
             $project->getId()
         );
 
-        return $response;
+        return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 }

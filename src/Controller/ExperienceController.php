@@ -94,19 +94,13 @@ final class ExperienceController extends AbstractController
 
         $em->flush();
 
-        $response = $this->json(['id' => $exp->getId()], 201);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
-
         $this->cache->invalidateStandard(
             $user->getId(),
             $user->getUsername(),
             $role
         );
 
-        return $response;
+        return $this->json(['id' => $exp->getId()], 201);
     }
 
     #[Route('/{id}', name: 'api_experiences_update', methods: ['PUT', 'PATCH'])]
@@ -155,12 +149,6 @@ final class ExperienceController extends AbstractController
 
         $em->flush();
 
-        $response = $this->json(['updated'=>true]);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
-
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
             $user->getUsername(),
@@ -170,7 +158,7 @@ final class ExperienceController extends AbstractController
             $exp->getId()
         );
 
-        return $response;
+        return $this->json(['updated'=>true]);
     }
 
     #[Route('/{id}', name: 'api_experiences_delete', methods: ['DELETE'])]
@@ -183,13 +171,7 @@ final class ExperienceController extends AbstractController
         $em->remove($exp);
         $user->setExperiencesCount($user->getExperiencesCount() - 1);
         $em->persist($user);
-        $em->flush();
-
-        $response = $this->json(null,204);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
+        $em->flush();;
 
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
@@ -200,6 +182,6 @@ final class ExperienceController extends AbstractController
             $exp->getId()
         );
 
-        return $response;
+        return $this->json(null,204);
     }
 }

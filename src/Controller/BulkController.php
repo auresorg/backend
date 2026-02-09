@@ -348,11 +348,6 @@ final class BulkController extends AbstractController
         /* ---------- SINGLE FLUSH ---------- */
         $em->flush();
 
-        $response = new JsonResponse(['ok' => true]);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
         // Invalidate cache after successful update, for each role the user has in the updated entities
         foreach ($roles as $role) {
             $this->cache->invalidateStandard(
@@ -362,6 +357,6 @@ final class BulkController extends AbstractController
             );
         }
 
-        return $response;
+        return $this->json(['ok' => true]);
     }
 }
