@@ -96,9 +96,9 @@ final class ExperienceController extends AbstractController
 
         $response = $this->json(['id' => $exp->getId()], 201);
 
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
+        // if (function_exists('fastcgi_finish_request')) {
+        //     fastcgi_finish_request();
+        // }
 
         $this->cache->invalidateStandard(
             $user->getId(),
@@ -157,9 +157,9 @@ final class ExperienceController extends AbstractController
 
         $response = $this->json(['updated'=>true]);
 
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
+        // if (function_exists('fastcgi_finish_request')) {
+        //     fastcgi_finish_request();
+        // }
 
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
@@ -187,9 +187,9 @@ final class ExperienceController extends AbstractController
 
         $response = $this->json(null,204);
 
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
+        // if (function_exists('fastcgi_finish_request')) {
+        //     fastcgi_finish_request();
+        // }
 
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
