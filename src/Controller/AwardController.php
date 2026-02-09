@@ -144,8 +144,6 @@ final class AwardController extends AbstractController
             'role' => $award->getRole()?->value,
         ];
 
-        $response = $this->json($awardData, Response::HTTP_CREATED);
-
         // if (function_exists('fastcgi_finish_request')) {
         //     fastcgi_finish_request();
         // }
@@ -156,7 +154,7 @@ final class AwardController extends AbstractController
             $role
         );
 
-        return $response;
+        return $this->json($awardData, Response::HTTP_CREATED);
     }
 
     #[Route('/{id}', name: 'api_awards_update', methods: ['PUT', 'PATCH'])]
@@ -245,12 +243,6 @@ final class AwardController extends AbstractController
             'role' => $award->getRole()?->value,
         ];
 
-        $response = $this->json($awardData, Response::HTTP_OK);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
-
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
             $user->getUsername(),
@@ -260,7 +252,7 @@ final class AwardController extends AbstractController
             $award->getId()
         );
 
-        return $response;
+        return $this->json($awardData, Response::HTTP_OK);;
     }
 
     #[Route('/{id}', name: 'api_awards_delete', methods: ['DELETE'])]
@@ -281,11 +273,6 @@ final class AwardController extends AbstractController
 
         $entityManager->flush();
 
-        $response = $this->json(null, Response::HTTP_NO_CONTENT);
-
-        // if (function_exists('fastcgi_finish_request')) {
-        //     fastcgi_finish_request();
-        // }
 
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
@@ -296,6 +283,6 @@ final class AwardController extends AbstractController
             $award->getId()
         );
 
-        return $response;
+        return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 }

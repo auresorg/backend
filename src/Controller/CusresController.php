@@ -104,11 +104,6 @@ final class CusresController extends AbstractController
             return $this->json(['error' => 'Slug already exists'], 409);
         }
 
-        $response = $this->json([
-            'id' => $c->getId(),
-            'slug' => $c->getSlug(),
-        ], 201);
-
         // if (function_exists('fastcgi_finish_request')) {
         //     fastcgi_finish_request();
         // }
@@ -118,7 +113,10 @@ final class CusresController extends AbstractController
             $c->getSlug()
         );
 
-        return $response;
+        return $this->json([
+            'id' => $c->getId(),
+            'slug' => $c->getSlug(),
+        ], 201);
     }
 
     /* ---------------------------------------------------- */
