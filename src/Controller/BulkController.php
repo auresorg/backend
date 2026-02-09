@@ -350,9 +350,9 @@ final class BulkController extends AbstractController
 
         $response = new JsonResponse(['ok' => true]);
 
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
+        // if (function_exists('fastcgi_finish_request')) {
+        //     fastcgi_finish_request();
+        // }
         // Invalidate cache after successful update, for each role the user has in the updated entities
         foreach ($roles as $role) {
             $this->cache->invalidateStandard(

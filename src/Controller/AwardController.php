@@ -146,9 +146,9 @@ final class AwardController extends AbstractController
 
         $response = $this->json($awardData, Response::HTTP_CREATED);
 
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
+        // if (function_exists('fastcgi_finish_request')) {
+        //     fastcgi_finish_request();
+        // }
 
         $this->cache->invalidateStandard(
             $user->getId(),
@@ -247,9 +247,9 @@ final class AwardController extends AbstractController
 
         $response = $this->json($awardData, Response::HTTP_OK);
 
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
+        // if (function_exists('fastcgi_finish_request')) {
+        //     fastcgi_finish_request();
+        // }
 
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
@@ -283,9 +283,9 @@ final class AwardController extends AbstractController
 
         $response = $this->json(null, Response::HTTP_NO_CONTENT);
 
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
+        // if (function_exists('fastcgi_finish_request')) {
+        //     fastcgi_finish_request();
+        // }
 
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),

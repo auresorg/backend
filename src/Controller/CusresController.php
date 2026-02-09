@@ -109,9 +109,9 @@ final class CusresController extends AbstractController
             'slug' => $c->getSlug(),
         ], 201);
 
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
+        // if (function_exists('fastcgi_finish_request')) {
+        //     fastcgi_finish_request();
+        // }
 
         $this->cache->invalidateCustom(
             $u->getId(),
