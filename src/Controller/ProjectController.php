@@ -278,6 +278,8 @@ final class ProjectController extends AbstractController
             return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
         }
 
+        $id = $project->getId();
+
         $entityManager->remove($project);
 
         $user->decrementProjectsCount();
@@ -293,7 +295,7 @@ final class ProjectController extends AbstractController
             null,
             $project->getRole()?->value,
             'projects',
-            $project->getId()
+            $id
         );
 
         return $this->json(null, Response::HTTP_NO_CONTENT);
