@@ -168,6 +168,8 @@ final class ExperienceController extends AbstractController
         $exp = $em->getRepository(Experience::class)->find($id);
         if (!$exp || $exp->getUser() !== $user) return $this->json(['error'=>'Not found'],404);
 
+        $id = $exp->getId();
+
         $em->remove($exp);
         $user->setExperiencesCount($user->getExperiencesCount() - 1);
         $em->persist($user);
@@ -179,7 +181,7 @@ final class ExperienceController extends AbstractController
             null,
             $exp->getRole()?->value,
             'experiences',
-            $exp->getId()
+            $id
         );
 
         return $this->json(null,204);

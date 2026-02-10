@@ -255,6 +255,8 @@ final class CertificationController extends AbstractController
             return $this->json(['error' => 'Certification not found'], Response::HTTP_NOT_FOUND);
         }
 
+        $id = $certification->getId();
+
         $entityManager->remove($certification);
 
         $user->decrementCertCount();
@@ -268,7 +270,7 @@ final class CertificationController extends AbstractController
             null,
             $certification->getRole()?->value,
             'certifications',
-            $certification->getId()
+            $id
         );
 
         return $this->json(null, Response::HTTP_NO_CONTENT);

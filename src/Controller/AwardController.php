@@ -266,6 +266,8 @@ final class AwardController extends AbstractController
             return $this->json(['error' => 'Award not found'], Response::HTTP_NOT_FOUND);
         }
 
+        $id = $award->getId();
+
         $entityManager->remove($award);
 
         $user->setAwardsCount($user->getAwardsCount() - 1);
@@ -280,7 +282,7 @@ final class AwardController extends AbstractController
             null,
             $award->getRole()?->value,
             'awards',
-            $award->getId()
+            $id
         );
 
         return $this->json(null, Response::HTTP_NO_CONTENT);
