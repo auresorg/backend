@@ -40,6 +40,7 @@ class UserController extends AbstractController
             'linkedin' => $user->getLinkedin(),
             'leetcode' => $user->getLeetcode(),
             'portfolio' => $user->getPortfolio(),
+            'phoneNumber' => $user->getPhoneNumber(),
             'skills' => $user->getSkills(),
             'projectsCount' => $user->getProjectsCount(),
             'certCount' => $user->getCertCount(),
@@ -65,6 +66,7 @@ class UserController extends AbstractController
         if (isset($data['linkedin'])) $user->setLinkedin($data['linkedin']);
         if (isset($data['leetcode'])) $user->setLeetcode($data['leetcode']);
         if (isset($data['portfolio'])) $user->setPortfolio($data['portfolio']);
+        if (isset($data['phoneNumber'])) $user->setPhoneNumber($data['phoneNumber']);
 
         $this->em->flush();
 
@@ -77,6 +79,7 @@ class UserController extends AbstractController
             'plan' => $user->getPlan(),
             'linkedin' => $user->getLinkedin(),
             'leetcode' => $user->getLeetcode(),
+            'phoneNumber' => $user->getPhoneNumber(),
             'skills' => $user->getSkills(),
             'projectsCount' => $user->getProjectsCount(),
             'certCount' => $user->getCertCount(),
