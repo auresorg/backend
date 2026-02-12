@@ -53,10 +53,7 @@ final class BulkController extends AbstractController
     }
 
     #[Route('/bulk', name: 'app_bulk_import', methods: ['POST'])]
-    public function bulk(
-        Request $request,
-        EntityManagerInterface $em
-    ): JsonResponse {
+    public function bulk(Request $request, EntityManagerInterface $em): JsonResponse {
         /** @var User|null **/
         $user = $this->getUser();
 
@@ -162,44 +159,67 @@ final class BulkController extends AbstractController
         $skillCounts = [];
 
         /* ---------- PROJECTS ---------- */
-        foreach ($payload['projects'] ?? [] as $item) {
+        foreach ($payload['projects'] ?? [] as $index => $item) {
             $entity = new Project();
             $entity->setUser($user);
+            
+            // Validation
+            if (isset($item['name']) && (empty(trim($item['name'])) || strlen($item['name']) > 255)) {
+                return new JsonResponse(['error' => 'Project name is required and must be at most 255 characters.'], 400);
+            }
+            
+            if (isset($item['repo']) && (empty(trim($item['repo'])) || strlen($item['repo']) > 140)) {
+                return new JsonResponse(['error' => 'Project repo URL is required and must be at most 140 characters.'], 400);
+            }
+            
+            if (isset($item['description']) && strlen($item['description']) < 100) {
+                return new JsonResponse(['error' => 'Project description must be at least 100 characters.'], 400);
+            }
+            
+            if (isset($item['tech']) && (!is_array($item['tech']) || empty($item['tech']))) {
+                return new JsonResponse(['error' => 'Project tech must be a non-empty array.'], 400);
+            }
 
             foreach ($item as $key => $value) {
-
                 if ($key === 'role') {
-                    if (
-                        $value !== null &&
-                        !in_array($value, array_column(RoleType::cases(), 'value'), true)
-                    ) {
-                        return new JsonResponse(
-                            ['error' => 'Invalid role'],
-                            400
-                        );
+                    if ($value !== null && !in_array($value, array_column(RoleType::cases(), 'value'), true)) {
+                        return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
                     }
-
+                    
                     $entity->setRole($value ? RoleType::from($value) : null);
-
-                    //if it is not in the roles array, add it
+                    
                     if ($value && !in_array($value, $roles, true)) {
                         $roles[] = $value;
                     }
                     continue;
                 }
-
+                
+                if ($key === 'url') {
+                    if (!empty($value)) {
+                        $url = trim($value);
+                        if (!preg_match("~^(?:f|ht)tps?://~i", $url)) {
+                            $url = "https://" . $url;
+                        }
+                        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+                            return new JsonResponse(['error' => 'Invalid project URL format.'], 400);
+                        }
+                        $entity->setUrl($url);
+                    } else {
+                        $entity->setUrl(null);
+                    }
+                    continue;
+                }
+                
                 $setter = 'set' . ucfirst($key);
                 if (method_exists($entity, $setter)) {
-                    if (
-                        in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)
-                    ) {
+                    if (in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)) {
                         $entity->$setter($this->parseDate($value));
                     } else {
                         $entity->$setter($value);
                     }
                 }
-
-                //count skills
+                
+                //count skills and increment user skills
                 if ($key === 'tech' && is_array($value)) {
                     foreach ($value as $skill) {
                         $skillLower = strtolower($skill);
@@ -208,134 +228,173 @@ final class BulkController extends AbstractController
                         } else {
                             $skillCounts[$skillLower] = 1;
                         }
+                        $user->incrementSkill($skill);
                     }
                 }
             }
-
+            
             $em->persist($entity);
+            $user->incrementProjectsCount();
         }
 
         /* ---------- EXPERIENCE ---------- */
-        foreach ($payload['experience'] ?? [] as $item) {
+        foreach ($payload['experience'] ?? [] as $index => $item) {
             $entity = new Experience();
             $entity->setUser($user);
+            
+            // Validation
+            if (isset($item['title']) && empty(trim($item['title']))) {
+                return new JsonResponse(['error' => 'Experience title is required.'], 400);
+            }
+            
+            if (isset($item['company']) && empty(trim($item['company']))) {
+                return new JsonResponse(['error' => 'Experience company is required.'], 400);
+            }
+            
+            if (isset($item['startDate']) && empty($item['startDate'])) {
+                return new JsonResponse(['error' => 'Experience start date is required.'], 400);
+            }
 
             foreach ($item as $key => $value) {
-
                 if ($key === 'role') {
-                    if (
-                        $value !== null &&
-                        !in_array($value, array_column(RoleType::cases(), 'value'), true)
-                    ) {
-                        return new JsonResponse(
-                            ['error' => 'Invalid role'],
-                            400
-                        );
+                    if ($value !== null && !in_array($value, array_column(RoleType::cases(), 'value'), true)) {
+                        return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
                     }
-
+                    
                     if ($value && !in_array($value, $roles, true)) {
                         $roles[] = $value;
                     }
-
+                    
                     $entity->setRole($value ? RoleType::from($value) : null);
                     continue;
                 }
-
+                
                 $setter = 'set' . ucfirst($key);
                 if (method_exists($entity, $setter)) {
-                    if (
-                        in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)
-                    ) {
+                    if (in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)) {
                         $entity->$setter($this->parseDate($value));
                     } else {
                         $entity->$setter($value);
                     }
                 }
             }
-
+            
             $em->persist($entity);
+            $user->setExperienceCount($user->getExperienceCount() + 1);
         }
 
         /* ---------- CERTIFICATIONS ---------- */
-        foreach ($payload['certifications'] ?? [] as $item) {
+        foreach ($payload['certifications'] ?? [] as $index => $item) {
             $entity = new Certification();
             $entity->setUser($user);
+            
+            // Validation
+            if (isset($item['title']) && empty(trim($item['title']))) {
+                return new JsonResponse(['error' => 'Certification title is required.'], 400);
+            }
+            
+            if (isset($item['platform']) && empty(trim($item['platform']))) {
+                return new JsonResponse(['error' => 'Certification platform is required.'], 400);
+            }
+            
+            if (!empty($item['url']) && !filter_var($item['url'], FILTER_VALIDATE_URL)) {
+                return new JsonResponse(['error' => 'Certification URL must be a valid URL.'], 400);
+            }
+            
+            if (!empty($item['completedOn'])) {
+                try {
+                    $completedOn = new \DateTime($item['completedOn']);
+                    if ($completedOn > new \DateTime()) {
+                        return new JsonResponse(['error' => 'Certification completion date cannot be in the future.'], 400);
+                    }
+                } catch (\Exception $e) {
+                    return new JsonResponse(['error' => 'Invalid certification completion date.'], 400);
+                }
+            }
 
             foreach ($item as $key => $value) {
-
                 if ($key === 'role') {
-                    if (
-                        $value !== null &&
-                        !in_array($value, array_column(RoleType::cases(), 'value'), true)
-                    ) {
-                        return new JsonResponse(
-                            ['error' => 'Invalid role'],
-                            400
-                        );
+                    if ($value !== null && !in_array($value, array_column(RoleType::cases(), 'value'), true)) {
+                        return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
                     }
-
+                    
                     if ($value && !in_array($value, $roles, true)) {
                         $roles[] = $value;
                     }
-
+                    
                     $entity->setRole($value ? RoleType::from($value) : null);
                     continue;
                 }
-
+                
                 $setter = 'set' . ucfirst($key);
                 if (method_exists($entity, $setter)) {
-                    if (
-                        in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)
-                    ) {
+                    if (in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)) {
                         $entity->$setter($this->parseDate($value));
                     } else {
                         $entity->$setter($value);
                     }
                 }
             }
-
+            
             $em->persist($entity);
+            $user->incrementCertCount();
         }
 
         /* ---------- AWARDS ---------- */
-        foreach ($payload['awards'] ?? [] as $item) {
+        foreach ($payload['awards'] ?? [] as $index => $item) {
             $entity = new Award();
             $entity->setUser($user);
+            
+            // Validation
+            if (isset($item['title']) && empty(trim($item['title']))) {
+                return new JsonResponse(['error' => 'Award title is required.'], 400);
+            }
+            
+            if (isset($item['issuer']) && empty(trim($item['issuer']))) {
+                return new JsonResponse(['error' => 'Award issuer is required.'], 400);
+            }
+            
+            if (isset($item['type']) && !in_array($item['type'], ['first', 'second', 'third', 'fourth', 'participation'], true)) {
+                return new JsonResponse(['error' => 'Award type must be one of: first, second, third, fourth, participation.'], 400);
+            }
+            
+            if (!empty($item['date'])) {
+                try {
+                    $date = new \DateTime($item['date']);
+                    if ($date > new \DateTime()) {
+                        return new JsonResponse(['error' => 'Award date cannot be in the future.'], 400);
+                    }
+                } catch (\Exception $e) {
+                    return new JsonResponse(['error' => 'Invalid award date.'], 400);
+                }
+            }
 
             foreach ($item as $key => $value) {
-
                 if ($key === 'role') {
-                    if (
-                        $value !== null &&
-                        !in_array($value, array_column(RoleType::cases(), 'value'), true)
-                    ) {
-                        return new JsonResponse(
-                            ['error' => 'Invalid role'],
-                            400
-                        );
+                    if ($value !== null && !in_array($value, array_column(RoleType::cases(), 'value'), true)) {
+                        return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
                     }
-
+                    
                     if ($value && !in_array($value, $roles, true)) {
                         $roles[] = $value;
                     }
-
+                    
                     $entity->setRole($value ? RoleType::from($value) : null);
                     continue;
                 }
-
+                
                 $setter = 'set' . ucfirst($key);
                 if (method_exists($entity, $setter)) {
-                    if (
-                        in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)
-                    ) {
+                    if (in_array($key, ['startDate', 'endDate', 'completedOn', 'date'], true)) {
                         $entity->$setter($this->parseDate($value));
                     } else {
                         $entity->$setter($value);
                     }
                 }
             }
-
+            
             $em->persist($entity);
+            $user->setAwardsCount($user->getAwardsCount() + 1);
         }
 
         //set counts
