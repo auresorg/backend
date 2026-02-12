@@ -140,7 +140,7 @@ class User implements UserInterface
         $this->experiencesCount = $count;
         return $this;
     }
-    
+
     public function getAwards(): Collection
     {
         return $this->awards;
@@ -278,6 +278,20 @@ class User implements UserInterface
 
     #[ORM\Column(type: 'string', length: 10, options: ['default' => 'free'])]
     private string $plan = 'free';
+
+    #[ORM\Column(name: 'phoneNumber', type: 'string', length: 20, nullable: true)]
+    private ?string $phoneNumber = null;
+
+    public function getPhoneNumber(): ?string
+    {
+        return $this->phoneNumber;
+    }
+
+    public function setPhoneNumber(?string $phoneNumber): void
+    {
+        $this->phoneNumber = $phoneNumber;
+    }
+
 
     public function getPlan(): string
     {
@@ -506,6 +520,6 @@ class User implements UserInterface
 
     public function getUserIdentifier(): string
     {
-        return (string)$this->id;
+        return (string) $this->id;
     }
 }
