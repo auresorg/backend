@@ -354,8 +354,8 @@ final class BulkController extends AbstractController
                 return new JsonResponse(['error' => 'Award issuer is required.'], 400);
             }
             
-            if (isset($item['type']) && !in_array($item['type'], ['first', 'second', 'third', 'fourth', 'participation'], true)) {
-                return new JsonResponse(['error' => 'Award type must be one of: first, second, third, fourth, participation.'], 400);
+            if (!isset($item['type'])) {
+                return new JsonResponse(['error' => 'Award type is required.'], 400);
             }
             
             if (!empty($item['date'])) {

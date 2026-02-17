@@ -19,7 +19,6 @@ use App\Service\ResumeCacheInvalidatorHelper;
 #[IsGranted('ROLE_USER')]
 final class AwardController extends AbstractController
 {
-    private const AWARD_TYPES = ['first', 'second', 'third', 'fourth', 'participation'];
     private ResumeCacheInvalidatorHelper $cache;
 
     public function __construct(ResumeCacheInvalidatorHelper $cache)
@@ -93,10 +92,8 @@ final class AwardController extends AbstractController
 
         if (!isset($data['type']) || empty(trim($data['type']))) {
             $errors['type'] = 'Type is required.';
-        } elseif (!in_array($data['type'], self::AWARD_TYPES, true)) {
-            $errors['type'] = 'Type must be one of: ' . implode(', ', self::AWARD_TYPES);
         }
-
+        
         $role = $data['role'] ?? null;
         if ($role && !in_array($role, array_column(RoleType::cases(), 'value'), true)) {
             $errors['role'] = 'Role must be one of: frontend, backend, fullstack, devops.';
@@ -192,8 +189,6 @@ final class AwardController extends AbstractController
         if (isset($data['type'])) {
             if (empty(trim($data['type']))) {
                 $errors['type'] = 'Type cannot be empty.';
-            } elseif (!in_array($data['type'], self::AWARD_TYPES, true)) {
-                $errors['type'] = 'Type must be one of: ' . implode(', ', self::AWARD_TYPES);
             } else {
                 $award->setType(trim($data['type']));
             }
