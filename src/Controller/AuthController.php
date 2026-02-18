@@ -132,7 +132,7 @@ final class AuthController extends AbstractController
 
         if (!$user) {
             $conn = $this->em->getConnection();
-            $sql = "SELECT COUNT(*) AS cnt FROM invites WHERE username = :username";
+            $sql = "SELECT COUNT(*) AS cnt FROM invites WHERE username = :username AND accept = true";
             $stmt = $conn->prepare($sql);
             $result = $stmt->executeQuery(['username' => $username]);
             $count = $result->fetchAssociative()['cnt'] ?? 0;
@@ -165,7 +165,7 @@ final class AuthController extends AbstractController
                 }
 
                 try {
-                    $sql = "INSERT INTO invites (username, accept) VALUES (:username, false)";
+                    $sql = "INSERT INTO invites (username, accept) VALUES (:username, false) ON CONFLICT (username) DO NOTHING";
                     $stmt = $conn->prepare($sql);
                     $stmt->executeQuery(['username' => $username]);
                 } catch (Exception $e) {
