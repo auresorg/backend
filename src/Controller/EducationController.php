@@ -10,11 +10,20 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use App\Service\ResumeCacheInvalidatorHelper;
 
 #[Route('/api/education')]
 #[IsGranted('ROLE_USER')]
 final class EducationController extends AbstractController
 {
+
+    private ResumeCacheInvalidatorHelper $cache;
+
+    public function __construct(ResumeCacheInvalidatorHelper $cache)
+    {
+        $this->cache = $cache;
+    }
+
     #[Route('', name: 'api_education_index', methods: ['GET'])]
     public function index(EntityManagerInterface $entityManager): Response {
         /** @var User $user */
@@ -105,6 +114,8 @@ final class EducationController extends AbstractController
         
         $entityManager->persist($education);
         $entityManager->flush();
+
+        $this->cache->invalidateInUse($user->getId(), $user->getUsername());
 
         return $this->json(null, Response::HTTP_OK);
     }

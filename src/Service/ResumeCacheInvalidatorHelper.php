@@ -79,6 +79,57 @@ final class ResumeCacheInvalidatorHelper
         }
     }
 
+    public function invalidateInUse(int $userId, string $username): void
+    {
+        $sql = "
+            (
+                SELECT 
+                    'standard' AS type,
+                    role,
+                    NULL::text AS slug
+                FROM resumes
+                WHERE user_id = :uid
+                AND (
+                        projects +
+                        certificates +
+                        awards +
+                        experience
+                    ) >= 3
+            )
+
+            UNION ALL
+
+            (
+                SELECT
+                    'custom' AS type,
+                    NULL::text AS role,
+                    slug
+                FROM cusres
+                WHERE user_id = :uid
+                AND (
+                        json_array_length(projects) +
+                        json_array_length(certifications) +
+                        json_array_length(awards) +
+                        json_array_length(experiences)
+                    ) >= 3
+            )
+        ";
+
+        $rows = $this->db->fetchAllAssociative($sql, [
+            'uid' => $userId,
+        ]);
+
+        foreach ($rows as $row) {
+            if ($row['type'] === 'standard' && $row['role']) {
+                $this->invalidateStandard($userId, $username, $row['role']);
+            }
+
+            if ($row['type'] === 'custom' && $row['slug']) {
+                $this->invalidateCustom($userId, $row['slug']);
+            }
+        }
+    }
+
     private function fire(array $payload): void
     {
         $payload['_call_id'] = uniqid('php_', true);
