@@ -198,8 +198,8 @@ final class BulkController extends AbstractController
 
                     $entity->setRole($value ? RoleType::from($value) : null);
 
-                    if ($value && !in_array($value, $roles, true)) {
-                        $roles[] = $value;
+                    if ($value) {
+                        $roles[$value] = ($roles[$value] ?? 0) + 1;
                     }
                     continue;
                 }
@@ -271,8 +271,8 @@ final class BulkController extends AbstractController
                         return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
                     }
 
-                    if ($value && !in_array($value, $roles, true)) {
-                        $roles[] = $value;
+                    if ($value) {
+                        $roles[$value] = ($roles[$value] ?? 0) + 1;
                     }
 
                     $entity->setRole($value ? RoleType::from($value) : null);
@@ -328,8 +328,8 @@ final class BulkController extends AbstractController
                         return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
                     }
 
-                    if ($value && !in_array($value, $roles, true)) {
-                        $roles[] = $value;
+                    if ($value) {
+                        $roles[$value] = ($roles[$value] ?? 0) + 1;
                     }
 
                     $entity->setRole($value ? RoleType::from($value) : null);
@@ -385,8 +385,8 @@ final class BulkController extends AbstractController
                         return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
                     }
 
-                    if ($value && !in_array($value, $roles, true)) {
-                        $roles[] = $value;
+                    if ($value) {
+                        $roles[$value] = ($roles[$value] ?? 0) + 1;
                     }
 
                     $entity->setRole($value ? RoleType::from($value) : null);
@@ -418,12 +418,14 @@ final class BulkController extends AbstractController
         $em->flush();
 
         // Invalidate cache after successful update, for each role the user has in the updated entities
-        foreach ($roles as $role) {
-            $this->cache->invalidateStandard(
-                $user->getId(),
-                $user->getUsername(),
-                $role
-            );
+        foreach ($roles as $role => $count) {
+            if ($count >= 3) {
+                $this->cache->invalidateStandard(
+                    $user->getId(),
+                    $user->getUsername(),
+                    $role
+                );
+            }
         }
 
         return $this->json(['ok' => true]);

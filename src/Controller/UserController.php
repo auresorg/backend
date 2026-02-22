@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Service\ResumeCacheInvalidatorHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,9 +16,12 @@ class UserController extends AbstractController
 {
     private EntityManagerInterface $em;
 
-    public function __construct(EntityManagerInterface $em)
+    private ResumeCacheInvalidatorHelper $cache;
+
+    public function __construct(EntityManagerInterface $em, ResumeCacheInvalidatorHelper $cache)
     {
         $this->em = $em;
+        $this->cache = $cache;
     }
 
     #[Route('', methods: ['GET'])]
@@ -69,6 +73,8 @@ class UserController extends AbstractController
         if (isset($data['phoneNumber'])) $user->setPhoneNumber($data['phoneNumber']);
 
         $this->em->flush();
+
+        $this->cache->invalidateInUse($user->getId(), $user->getUsername());
 
         return $this->json([
             'firstName' => $user->getFirstName(),
@@ -126,6 +132,7 @@ class UserController extends AbstractController
         if (isset($data['showAwards'])) $user->setShowAwards((bool)$data['showAwards']);
 
         $this->em->flush();
+        $this->cache->invalidateInUse($user->getId(), $user->getUsername());
         return $this->json([
             'showEmail' => $user->isShowEmail(),
             'showProjects' => $user->isShowProjects(),
