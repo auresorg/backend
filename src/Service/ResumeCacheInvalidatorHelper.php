@@ -35,6 +35,28 @@ final class ResumeCacheInvalidatorHelper
         ]);
     }
 
+    public function deleteStandard(int $userId, string $username, string $role): void
+    {
+        $this->fire([
+            'action' => 'delete',
+            'type' => 'standard',
+            'userId' => $userId,
+            'username' => $username,
+            'role' => $role,
+        ]);
+    }
+
+    public function deleteCustom(int $userId, string $slug, string $username): void
+    {
+        $this->fire([
+            'action' => 'delete',
+            'type' => 'custom',
+            'userId' => $userId,
+            'username' => $username,
+            'slug' => $slug,
+        ]);
+    }
+
     /**
      * Generic invalidation for ANY entity update
      *
