@@ -32,6 +32,12 @@ final class BulkController extends AbstractController
     {
         if (!$value) {
             return null;
+        } else if ($value === 'present') {
+            return null;
+        } else if ($value === 'current') {
+            return null;
+        } else if ($value === "null") {
+            return null;
         }
 
         // YYYY-MM-DD
