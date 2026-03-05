@@ -36,6 +36,21 @@ class Cusres
     #[ORM\Column(type: 'json', options: ['default' => '[]'])]
     private array $experiences = [];
 
+    // add column "template" to store the template name
+    #[ORM\Column(type: 'string', length: 50, options: ['default' => 'jakes'])]
+    private string $template = 'jakes';
+
+    public function getTemplate(): string
+    {
+        return $this->template;
+    }
+
+    public function setTemplate(string $template): self
+    {
+        $this->template = $template;
+        return $this;
+    }
+
     public function getId(): ?int
     {
         return $this->id;

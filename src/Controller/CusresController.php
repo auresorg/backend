@@ -36,7 +36,7 @@ final class CusresController extends AbstractController
         $u = $this->getUser();
 
         $rows = $repo->createQueryBuilder('c')
-            ->select('c.slug, c.projects, c.certifications, c.awards, c.experiences')
+            ->select('c.slug, c.projects, c.certifications, c.awards, c.experiences, c.template')
             ->where('c.user = :u')
             ->setParameter('u', $u)
             ->orderBy('c.id', 'DESC')
@@ -50,7 +50,9 @@ final class CusresController extends AbstractController
                 'certifications' => count($r['certifications'] ?? []),
                 'awards' => count($r['awards'] ?? []),
                 'experiences' => count($r['experiences'] ?? []),
+                'template' => $r['template']
             ],
+            'template' => $r['template']
         ], $rows));
     }
 
@@ -84,6 +86,7 @@ final class CusresController extends AbstractController
         $certs = $this->assertOwnership($em, Certification::class, $data['certifications'] ?? [], $u);
         $awards = $this->assertOwnership($em, Award::class, $data['awards'] ?? [], $u);
         $exps = $this->assertOwnership($em, Experience::class, $data['experiences'] ?? [], $u);
+        $template = $data['template'] ?? 'jakes';
 
         if ($projects === false || $certs === false || $awards === false || $exps === false) {
             return $this->json(['error' => 'Invalid entity IDs'], 400);
@@ -96,7 +99,8 @@ final class CusresController extends AbstractController
                 ->setProjects($projects)
                 ->setCertifications($certs)
                 ->setAwards($awards)
-                ->setExperiences($exps);
+                ->setExperiences($exps)
+                ->setTemplate($template);
 
             $em->persist($c);
             $em->flush();
@@ -144,6 +148,44 @@ final class CusresController extends AbstractController
             $u->getId(),
             $slug,
             $u->getUsername()
+        );
+
+        return $this->json(null, 204);
+    }
+
+    // PUT to update template
+    #[Route('/{slug}', methods: ['PUT'])]
+    public function updateTemplate(
+        string $slug,
+        Request $req,
+        CusresRepository $repo,
+        EntityManagerInterface $em
+    ): JsonResponse {
+        /** @var User $u */
+        $u = $this->getUser();
+
+        $c = $repo->findOneBy(['slug' => $slug, 'user' => $u]);
+        if (!$c) {
+            return $this->json(['error' => 'Not found'], 404);
+        }
+
+        $data = json_decode($req->getContent(), true);
+        if (!is_array($data) || empty($data['template'])) {
+            return $this->json(['error' => 'Invalid JSON or missing template'], 400);
+        }
+
+        $templates = ['jakes', 'jakec'];
+        if (!in_array($data['template'], $templates, true)) {
+            return $this->json(['error' => 'Invalid template'], 400);
+        }
+
+        $c->setTemplate($data['template']);
+        $em->flush();
+
+        // Invalidate cache for this cusres
+        $this->cache->invalidateCustom(
+            $u->getId(),
+            $c->getSlug()
         );
 
         return $this->json(null, 204);
