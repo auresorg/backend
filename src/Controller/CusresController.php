@@ -144,7 +144,7 @@ final class CusresController extends AbstractController
         $em->remove($c);
         $em->flush();
 
-        $this->$cache->deleteCustom(
+        $this->cache->deleteCustom(
             $u->getId(),
             $slug,
             $u->getUsername()
