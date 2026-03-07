@@ -159,7 +159,9 @@ class UserController extends AbstractController
             SELECT role, projects, certificates, awards, experience 
             FROM resumes 
             WHERE user_id = :uid
+            AND (projects + certificates + awards + experience) > 3
         ";
+        
         $rows = $conn->executeQuery($sql, ['uid' => $user->getId()])->fetchAllAssociative();
 
         $data = array_map(function ($row) use ($user) {
