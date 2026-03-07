@@ -41,8 +41,7 @@ final class AwardController extends AbstractController
                 'issuer' => $award->getIssuer(),
                 'type' => $award->getType(),
                 'description' => $award->getDescription(),
-                'date' => $award->getDate()?->format('Y-m-d'),
-                'role' => $award->getRole()?->value,
+                'role' => $award->getRole(),
             ];
         }
 
@@ -66,8 +65,7 @@ final class AwardController extends AbstractController
             'issuer' => $award->getIssuer(),
             'type' => $award->getType(),
             'description' => $award->getDescription(),
-            'date' => $award->getDate()?->format('Y-m-d'),
-            'role' => $award->getRole()?->value,
+            'role' => $award->getRole(),
         ];
 
         return $this->json($awardData, Response::HTTP_OK);
@@ -94,9 +92,18 @@ final class AwardController extends AbstractController
             $errors['type'] = 'Type is required.';
         }
         
-        $role = $data['role'] ?? null;
-        if ($role && !in_array($role, array_column(RoleType::cases(), 'value'), true)) {
-            $errors['role'] = 'Role must be one of: frontend, backend, fullstack, devops.';
+        $role = $data['role'] ?? [];
+        if (!is_array($role)) {
+            $errors['role'] = 'Role must be an array.';
+        } elseif (empty($role)) {
+            $errors['role'] = 'At least one role must be specified.';
+        } else {
+            foreach ($role as $r) {
+                if (!in_array($r, array_column(RoleType::cases(), 'value'), true)) {
+                    $errors['role'] = 'Invalid role(s) provided.';
+                    break;
+                }
+            }
         }
 
         $date = null;
@@ -120,8 +127,7 @@ final class AwardController extends AbstractController
         $award->setTitle(trim($data['title']));
         $award->setIssuer(trim($data['issuer']));
         $award->setType(trim($data['type']));
-        $award->setDescription(isset($data['description']) ? trim($data['description']) : null);
-        $award->setRole($role ? RoleType::from($role) : null);
+        $award->setRole($role);
         $award->setDate($date ?? null);
 
         $entityManager->persist($award);
@@ -137,19 +143,20 @@ final class AwardController extends AbstractController
             'issuer' => $award->getIssuer(),
             'type' => $award->getType(),
             'description' => $award->getDescription(),
-            'date' => $award->getDate()?->format('Y-m-d'),
-            'role' => $award->getRole()?->value,
+            'role' => $award->getRole(),
         ];
 
         // if (function_exists('fastcgi_finish_request')) {
         //     fastcgi_finish_request();
         // }
 
-        $this->cache->invalidateStandard(
-            $user->getId(),
-            $user->getUsername(),
-            $role
-        );
+        foreach ($role as $r) {
+            $this->cache->invalidateStandard(
+                $user->getId(),
+                $user->getUsername(),
+                $r
+            );
+        }
 
         return $this->json($awardData, Response::HTTP_CREATED);
     }
@@ -165,7 +172,7 @@ final class AwardController extends AbstractController
             return $this->json(['error' => 'Award not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $oldRole = $award->getRole()?->value;
+        $oldRole = $award->getRole();
 
         $data = json_decode($request->getContent(), true);
         $errors = [];
@@ -198,11 +205,25 @@ final class AwardController extends AbstractController
             $award->setDescription(!empty($data['description']) ? trim($data['description']) : null);
         }
 
-        $role = $data['role'] ?? null;
-        if (isset($data['role']) && !in_array($role, array_column(RoleType::cases(), 'value'), true)) {
-            $errors['role'] = 'Role must be one of: frontend, backend, fullstack, devops.';
-        } elseif (isset($data['role'])) {
-            $award->setRole($role ? RoleType::from($role) : null);
+        if (isset($data['role'])) {
+            if (!is_array($data['role'])) {
+                $errors['role'] = 'Role must be an array.';
+            } elseif (empty($data['role'])) {
+                $errors['role'] = 'At least one role must be specified.';
+            } else {
+                foreach ($data['role'] as $r) {
+                    if (!in_array($r, array_column(RoleType::cases(), 'value'), true)) {
+                        $errors['role'] = 'Invalid role(s) provided.';
+                        break;
+                    }
+                }
+                if (!isset($errors['role'])) {
+                    $award->setRole($data['role']);
+                    $role = $data['role']; // used for invalidateAfterEntityUpdate below
+                }
+            }
+        } else {
+            $role = $oldRole; 
         }
 
         try {
@@ -234,8 +255,7 @@ final class AwardController extends AbstractController
             'issuer' => $award->getIssuer(),
             'type' => $award->getType(),
             'description' => $award->getDescription(),
-            'date' => $award->getDate()?->format('Y-m-d'),
-            'role' => $award->getRole()?->value,
+            'role' => $award->getRole(),
         ];
 
         $this->cache->invalidateAfterEntityUpdate(
@@ -274,8 +294,8 @@ final class AwardController extends AbstractController
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
             $user->getUsername(),
-            null,
-            $award->getRole()?->value,
+            [],
+            $award->getRole(),
             'awards',
             $id
         );

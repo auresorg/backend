@@ -51,7 +51,7 @@ final class ProjectController extends AbstractController
                 'url' => $project->getUrl(), // NEW
                 'tech' => $project->getTech(),
                 'description' => $project->getDescription(),
-                'role' => $project->getRole()->value,
+                'role' => $project->getRole(),
                 'startDate' => $project->getStartDate()->format('Y-m-d'),
                 'endDate' => $project->getEndDate()?->format('Y-m-d')
             ];
@@ -98,9 +98,18 @@ final class ProjectController extends AbstractController
             $errors['tech'] = 'At least one technology must be specified.';
         }
 
-        $role = $data['role'] ?? null;
-        if ($role && !in_array($role, array_column(RoleType::cases(), 'value'), true)) {
-            $errors['role'] = 'Role must be one of: frontend, backend, fullstack, devops.';
+        $role = $data['role'] ?? [];
+        if (!is_array($role)) {
+            $errors['role'] = 'Role must be an array.';
+        } elseif (empty($role)) {
+            $errors['role'] = 'At least one role must be specified.';
+        } else {
+            foreach ($role as $r) {
+                if (!in_array($r, array_column(RoleType::cases(), 'value'), true)) {
+                    $errors['role'] = 'Invalid role(s) provided.';
+                    break;
+                }
+            }
         }
 
         // Validate dates
@@ -129,7 +138,7 @@ final class ProjectController extends AbstractController
         $project->setRepo($repo);
         $project->setDescription($description);
         $project->setTech($tech);
-        $project->setRole(RoleType::from($role));
+        $project->setRole($role);
         $project->setStartDate($from);
         $project->setEndDate($to);
 
@@ -143,11 +152,13 @@ final class ProjectController extends AbstractController
 
         $entityManager->flush();
 
-        $this->cache->invalidateStandard(
-            $user->getId(),
-            $user->getUsername(),
-            $role       
-        );
+        foreach ($role as $r) {
+            $this->cache->invalidateStandard(
+                $user->getId(),
+                $user->getUsername(),
+                $r
+            );
+        }
 
         return $this->json([
             'id' => $project->getId(),
@@ -156,7 +167,7 @@ final class ProjectController extends AbstractController
             'url' => $project->getUrl(),
             'tech' => $project->getTech(),
             'description' => $project->getDescription(),
-            'role' => $project->getRole()->value,
+            'role' => $project->getRole(),
             'startDate' => $project->getStartDate()->format('Y-m-d'),
             'endDate' => $project->getEndDate()?->format('Y-m-d')
         ], Response::HTTP_CREATED);
@@ -176,7 +187,7 @@ final class ProjectController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
 
-        $oldRole = $project->getRole()?->value;
+        $oldRole = $project->getRole();
 
         if (isset($data['name'])) {
             $project->setName($data['name']);
@@ -221,10 +232,20 @@ final class ProjectController extends AbstractController
         }
 
         if (isset($data['role'])) {
-            if (!in_array($data['role'], array_column(RoleType::cases(), 'value'), true)) {
-                $errors['role'] = 'Role must be one of: frontend, backend, fullstack, devops.';
+            if (!is_array($data['role'])) {
+                $errors['role'] = 'Role must be an array.';
+            } elseif (empty($data['role'])) {
+                $errors['role'] = 'At least one role must be specified.';
             } else {
-                $project->setRole(RoleType::from($data['role']));
+                foreach ($data['role'] as $r) {
+                    if (!in_array($r, array_column(RoleType::cases(), 'value'), true)) {
+                        $errors['role'] = 'Invalid role(s) provided.';
+                        break;
+                    }
+                }
+                if (!isset($errors['role'])) {
+                    $project->setRole($data['role']);
+                }
             }
         }
 
@@ -260,7 +281,7 @@ final class ProjectController extends AbstractController
             $user->getId(),
             $user->getUsername(),
             $oldRole,
-            $project->getRole()?->value,
+            $project->getRole(),
             'projects',
             $project->getId()
         );
@@ -292,8 +313,8 @@ final class ProjectController extends AbstractController
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
             $user->getUsername(),
-            null,
-            $project->getRole()?->value,
+            [],
+            $project->getRole(),
             'projects',
             $id
         );

@@ -42,7 +42,7 @@ final class ExperienceController extends AbstractController
                 'startDate' => $exp->getStartDate()?->format('Y-m-d'),
                 'endDate' => $exp->getEndDate()?->format('Y-m-d'),
                 'description' => $exp->getDescription(),
-                'role' => $exp->getRole()?->value,
+                'role' => $exp->getRole(),
             ];
         }
 
@@ -72,9 +72,19 @@ final class ExperienceController extends AbstractController
             catch (Exception) { $errors['endDate'] = 'Invalid end date.'; }
         }
 
-        $role = $data['role'] ?? null;
-        if ($role && !in_array($role, array_column(RoleType::cases(), 'value'), true))
-            $errors['role'] = 'Invalid role.';
+        $role = $data['role'] ?? [];
+        if (!is_array($role)) {
+            $errors['role'] = 'Role must be an array.';
+        } elseif (empty($role)) {
+            $errors['role'] = 'At least one role must be specified.';
+        } else {
+            foreach ($role as $r) {
+                if (!in_array($r, array_column(RoleType::cases(), 'value'), true)) {
+                    $errors['role'] = 'Invalid role(s) provided.';
+                    break;
+                }
+            }
+        }
 
         if (!empty($errors)) return $this->json(['errors' => $errors], 400);
 
@@ -85,7 +95,7 @@ final class ExperienceController extends AbstractController
         $exp->setStartDate($startDate ?? null);
         $exp->setEndDate($endDate);
         $exp->setDescription($data['description'] ?? null);
-        $exp->setRole($role ? RoleType::from($role) : null);
+        $exp->setRole($role);
 
         $em->persist($exp);
 
@@ -94,11 +104,13 @@ final class ExperienceController extends AbstractController
 
         $em->flush();
 
-        $this->cache->invalidateStandard(
-            $user->getId(),
-            $user->getUsername(),
-            $role
-        );
+        foreach ($role as $r) {
+            $this->cache->invalidateStandard(
+                $user->getId(),
+                $user->getUsername(),
+                $r
+            );
+        }
 
         return $this->json(['id' => $exp->getId()], 201);
     }
@@ -110,7 +122,7 @@ final class ExperienceController extends AbstractController
         $exp = $em->getRepository(Experience::class)->find($id);
         if (!$exp || $exp->getUser() !== $user) return $this->json(['error' => 'Not found'], 404);
 
-        $oldRole = $exp->getRole()?->value;
+        $oldRole = $exp->getRole();
 
         $data = json_decode($request->getContent(), true);
         $errors = [];
@@ -140,9 +152,21 @@ final class ExperienceController extends AbstractController
         if (isset($data['description'])) $exp->setDescription($data['description'] ?: null);
 
         if (isset($data['role'])) {
-            if (!in_array($data['role'], array_column(RoleType::cases(),'value'), true))
-                $errors['role']='Invalid role.';
-            else $exp->setRole($data['role'] ? RoleType::from($data['role']) : null);
+            if (!is_array($data['role'])) {
+                $errors['role'] = 'Role must be an array.';
+            } elseif (empty($data['role'])) {
+                $errors['role'] = 'At least one role must be specified.';
+            } else {
+                foreach ($data['role'] as $r) {
+                    if (!in_array($r, array_column(RoleType::cases(), 'value'), true)) {
+                        $errors['role'] = 'Invalid role(s) provided.';
+                        break;
+                    }
+                }
+                if (!isset($errors['role'])) {
+                    $exp->setRole($data['role']);
+                }
+            }
         }
 
         if ($errors) return $this->json(['errors'=>$errors],400);
@@ -153,7 +177,7 @@ final class ExperienceController extends AbstractController
             $user->getId(),
             $user->getUsername(),
             $oldRole,
-            $exp->getRole()?->value,
+            $exp->getRole(),
             'experiences',
             $exp->getId()
         );
@@ -178,8 +202,8 @@ final class ExperienceController extends AbstractController
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
             $user->getUsername(),
-            null,
-            $exp->getRole()?->value,
+            [],
+            $exp->getRole(),
             'experiences',
             $id
         );

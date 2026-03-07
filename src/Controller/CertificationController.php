@@ -38,8 +38,7 @@ final class CertificationController extends AbstractController
                 'title' => $certification->getTitle(),
                 'platform' => $certification->getPlatform(),
                 'description' => $certification->getDescription(),
-                'url' => $certification->getUrl(),
-                'role' => $certification->getRole()?->value,
+                'role' => $certification->getRole(),
                 'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
             ];
         }
@@ -63,8 +62,7 @@ final class CertificationController extends AbstractController
             'title' => $certification->getTitle(),
             'platform' => $certification->getPlatform(),
             'description' => $certification->getDescription(),
-            'url' => $certification->getUrl(),
-            'role' => $certification->getRole()?->value,
+            'role' => $certification->getRole(),
             'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
         ];
 
@@ -92,9 +90,18 @@ final class CertificationController extends AbstractController
             $errors['url'] = 'URL must be a valid URL.';
         }
 
-        $role = $data['role'] ?? null;
-        if ($role && !in_array($role, array_column(RoleType::cases(), 'value'), true)) {
-            $errors['role'] = 'Role must be one of: frontend, backend, fullstack, devops.';
+        $role = $data['role'] ?? [];
+        if (!is_array($role)) {
+            $errors['role'] = 'Role must be an array.';
+        } elseif (empty($role)) {
+            $errors['role'] = 'At least one role must be specified.';
+        } else {
+            foreach ($role as $r) {
+                if (!in_array($r, array_column(RoleType::cases(), 'value'), true)) {
+                    $errors['role'] = 'Invalid role(s) provided.';
+                    break;
+                }
+            }
         }
 
         try {
@@ -117,8 +124,7 @@ final class CertificationController extends AbstractController
         $certification->setTitle(trim($data['title']));
         $certification->setPlatform(trim($data['platform']));
         $certification->setDescription(isset($data['description']) ? trim($data['description']) : null);
-        $certification->setUrl(isset($data['url']) ? trim($data['url']) : null);
-        $certification->setRole($role ? RoleType::from($role) : null);
+        $certification->setRole($role);
 
         if (!empty($data['completedOn'])) {
             $certification->setCompletedOn(new \DateTime($data['completedOn']));
@@ -136,16 +142,17 @@ final class CertificationController extends AbstractController
             'title' => $certification->getTitle(),
             'platform' => $certification->getPlatform(),
             'description' => $certification->getDescription(),
-            'url' => $certification->getUrl(),
-            'role' => $certification->getRole()?->value,
+            'role' => $certification->getRole(),
             'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
         ];
 
-        $this->cache->invalidateStandard(
-            $user->getId(),
-            $user->getUsername(),
-            $role
-        );
+        foreach ($role as $r) {
+            $this->cache->invalidateStandard(
+                $user->getId(),
+                $user->getUsername(),
+                $r
+            );
+        }
 
         return $this->json($certificationData, Response::HTTP_CREATED);
     }
@@ -161,7 +168,7 @@ final class CertificationController extends AbstractController
             return $this->json(['error' => 'Certification not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $oldRole = $certification->getRole()?->value;
+        $oldRole = $certification->getRole();
 
         $data = json_decode($request->getContent(), true);
         $errors = [];
@@ -194,9 +201,25 @@ final class CertificationController extends AbstractController
             $certification->setDescription(!empty($data['description']) ? trim($data['description']) : null);
         }
 
-        $role = $data['role'] ?? null;
-        if (!in_array($role, array_column(RoleType::cases(), 'value'), true)) {
-            $errors['role'] = 'Role must be one of: frontend, backend, fullstack, devops.';
+        if (isset($data['role'])) {
+            if (!is_array($data['role'])) {
+                $errors['role'] = 'Role must be an array.';
+            } elseif (empty($data['role'])) {
+                $errors['role'] = 'At least one role must be specified.';
+            } else {
+                foreach ($data['role'] as $r) {
+                    if (!in_array($r, array_column(RoleType::cases(), 'value'), true)) {
+                        $errors['role'] = 'Invalid role(s) provided.';
+                        break;
+                    }
+                }
+                if (!isset($errors['role'])) {
+                    $certification->setRole($data['role']);
+                    $role = $data['role']; // used for invalidateAfterEntityUpdate below
+                }
+            }
+        } else {
+            $role = $oldRole; 
         }
 
         try {
@@ -227,8 +250,7 @@ final class CertificationController extends AbstractController
             'title' => $certification->getTitle(),
             'platform' => $certification->getPlatform(),
             'description' => $certification->getDescription(),
-            'url' => $certification->getUrl(),
-            'role' => $certification->getRole()?->value,
+            'role' => $certification->getRole(),
             'completedOn' => $certification->getCompletedOn()?->format('Y-m-d'),
         ];
 
@@ -267,8 +289,8 @@ final class CertificationController extends AbstractController
         $this->cache->invalidateAfterEntityUpdate(
             $user->getId(),
             $user->getUsername(),
-            null,
-            $certification->getRole()?->value,
+            [],
+            $certification->getRole(),
             'certifications',
             $id
         );

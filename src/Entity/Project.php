@@ -30,8 +30,8 @@ class Project
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
-    #[ORM\Column(type: 'string', length: 20, enumType: RoleType::class)]
-    private ?RoleType $role = null;
+    #[ORM\Column(type: 'json', nullable: true)]
+    private array $role = [];
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'projects')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -110,12 +110,12 @@ class Project
         $this->description = $description;
     }
 
-    public function getRole(): ?RoleType
+    public function getRole(): array
     {
-        return $this->role;
+        return $this->role ?? [];
     }
 
-    public function setRole(?RoleType $role): void
+    public function setRole(array $role): void
     {
         $this->role = $role;
     }

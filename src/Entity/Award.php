@@ -29,8 +29,8 @@ class Award
     #[ORM\Column(type: 'date', nullable: true)]
     private ?DateTimeInterface $date = null;
 
-    #[ORM\Column(type: 'string', length: 20, enumType: RoleType::class)]
-    private ?RoleType $role = null;
+    #[ORM\Column(type: 'json', nullable: true)]
+    private array $role = [];
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'awards')]
     #[ORM\JoinColumn(nullable: false)]
@@ -97,12 +97,12 @@ class Award
         $this->date = $date;
     }
 
-    public function getRole(): ?RoleType
+    public function getRole(): array
     {
-        return $this->role;
+        return $this->role ?? [];
     }
 
-    public function setRole(?RoleType $role): void
+    public function setRole(array $role): void
     {
         $this->role = $role;
     }
