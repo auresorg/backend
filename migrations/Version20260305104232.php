@@ -24,7 +24,7 @@ final class Version20260305104232 extends AbstractMigration
         $this->addSql('ALTER TABLE award ADD CONSTRAINT FK_8A5B2EE7A76ED395 FOREIGN KEY (user_id) REFERENCES "users" (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE certification DROP CONSTRAINT FK_6C3C6D75A76ED395');
         $this->addSql('ALTER TABLE certification ADD CONSTRAINT FK_6C3C6D75A76ED395 FOREIGN KEY (user_id) REFERENCES "users" (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
-        $this->addSql('ALTER TABLE cusres ADD template VARCHAR(50) DEFAULT \'jakes\' NOT NULL');
+        // $this->addSql('ALTER TABLE cusres ADD template VARCHAR(50) DEFAULT \'jakes\' NOT NULL');
         $this->addSql('ALTER TABLE education DROP CONSTRAINT FK_DB0A5ED2A76ED395');
         $this->addSql('ALTER TABLE education ADD CONSTRAINT FK_DB0A5ED2A76ED395 FOREIGN KEY (user_id) REFERENCES "users" (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE experience DROP CONSTRAINT FK_590C103A76ED395');
@@ -41,7 +41,7 @@ final class Version20260305104232 extends AbstractMigration
         $this->addSql('ALTER TABLE award ADD CONSTRAINT fk_8a5b2ee7a76ed395 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE education DROP CONSTRAINT fk_db0a5ed2a76ed395');
         $this->addSql('ALTER TABLE education ADD CONSTRAINT fk_db0a5ed2a76ed395 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
-        $this->addSql('ALTER TABLE cusres DROP template');
+        // $this->addSql('ALTER TABLE cusres DROP template');
         $this->addSql('ALTER TABLE experience DROP CONSTRAINT fk_590c103a76ed395');
         $this->addSql('ALTER TABLE experience ADD CONSTRAINT fk_590c103a76ed395 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
     }

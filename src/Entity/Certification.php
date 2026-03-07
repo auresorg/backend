@@ -29,15 +29,15 @@ class Certification
     #[ORM\Column(type: 'date', nullable: true)]
     private ?DateTimeInterface $completedOn = null;
 
-    #[ORM\Column(type: 'string', length: 20, enumType: RoleType::class)]
-    private ?RoleType $role = null;
+    #[ORM\Column(type: 'json', nullable: true)]
+    private array $role = [];
 
-    public function getRole(): ?RoleType
+    public function getRole(): array
     {
-        return $this->role;
+        return $this->role ?? [];
     }
 
-    public function setRole(?RoleType $role): void
+    public function setRole(array $role): void
     {
         $this->role = $role;
     }

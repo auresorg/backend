@@ -63,14 +63,11 @@ final class ResumeCacheInvalidatorHelper
      * $entityColumn must be one of:
      *  projects | experiences | certifications | awards
      */
-    public function invalidateAfterEntityUpdate(int $userId, string $username, ?string $oldRole, ?string $newRole, string $entityColumn, int $entityId): void
+    public function invalidateAfterEntityUpdate(int $userId, string $username, array $oldRoles, array $newRoles, string $entityColumn, int $entityId): void
     {
-        if ($oldRole && $oldRole !== $newRole) {
-            $this->invalidateStandard($userId, $username, $oldRole);
-        }
-
-        if ($newRole) {
-            $this->invalidateStandard($userId, $username, $newRole);
+        $rolesToInvalidate = array_unique(array_merge($oldRoles, $newRoles));
+        foreach ($rolesToInvalidate as $roleToInvalidate) {
+            $this->invalidateStandard($userId, $username, $roleToInvalidate);
         }
 
         if (

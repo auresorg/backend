@@ -29,8 +29,8 @@ class Experience
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
-    #[ORM\Column(type: 'string', length: 20, enumType: RoleType::class, nullable: true)]
-    private ?RoleType $role = null;
+    #[ORM\Column(type: 'json', nullable: true)]
+    private array $role = [];
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'experiences')]
     #[ORM\JoinColumn(nullable: false)]
@@ -52,8 +52,8 @@ class Experience
     public function getDescription(): ?string { return $this->description; }
     public function setDescription(?string $description): void { $this->description = $description; }
 
-    public function getRole(): ?RoleType { return $this->role; }
-    public function setRole(?RoleType $role): void { $this->role = $role; }
+    public function getRole(): array { return $this->role ?? []; }
+    public function setRole(array $role): void { $this->role = $role; }
 
     public function getUser(): ?User { return $this->user; }
     public function setUser(?User $user): void { $this->user = $user; }
