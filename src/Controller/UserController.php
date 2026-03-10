@@ -156,7 +156,7 @@ class UserController extends AbstractController
         $conn = $this->em->getConnection();
         
         $sql = "
-            SELECT role, projects, certificates, awards, experience 
+            SELECT role, projects, certificates, awards, experience, template, last_compiled 
             FROM resumes 
             WHERE user_id = :uid
             AND (projects + certificates + awards + experience) > 3
@@ -168,6 +168,8 @@ class UserController extends AbstractController
             return [
                 'username' => $user->getUsername(),
                 'role' => $row['role'],
+                'template' => $row['template'] ?? 'jakes',
+                'last_compiled' => $row['last_compiled'] ?? null,
                 'stats' => [
                     'projects' => $row['projects'],
                     'certificates' => $row['certificates'],
@@ -178,6 +180,46 @@ class UserController extends AbstractController
         }, $rows);
 
         return $this->json($data);
+    }
+
+    #[Route('/roleres/{role}', methods: ['PUT'])]
+    public function updateRoleResumeTemplate(string $role, Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        if (!$user) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data) || empty($data['template'])) {
+            return $this->json(['error' => 'Invalid JSON or missing template'], 400);
+        }
+
+        $templates = ['jakes', 'jakec'];
+        if (!in_array($data['template'], $templates, true)) {
+            return $this->json(['error' => 'Invalid template'], 400);
+        }
+
+        $conn = $this->em->getConnection();
+        
+        // Update template for the specific role and user
+        $sql = "UPDATE resumes SET template = :template WHERE user_id = :uid AND role = :role";
+        $result = $conn->executeStatement($sql, [
+            'template' => $data['template'],
+            'uid' => $user->getId(),
+            'role' => $role
+        ]);
+
+        if ($result === 0) {
+            return $this->json(['error' => 'Resume not found'], 404);
+        }
+
+        // Invalidate cache for this role-based resume
+        $this->cache->invalidateInUse($user->getId(), $user->getUsername());
+
+        return $this->json(null, 204);
     }
 
     #[Route('', methods: ['DELETE'])]
