@@ -131,51 +131,8 @@ final class AuthController extends AbstractController
         $isNewUser = false;
 
         if (!$user) {
-            $conn = $this->em->getConnection();
-            $sql = "SELECT COUNT(*) AS cnt FROM invites WHERE username = :username AND accept = true";
-            $stmt = $conn->prepare($sql);
-            $result = $stmt->executeQuery(['username' => $username]);
-            $count = $result->fetchAssociative()['cnt'] ?? 0;
-            if ($count == 0) {
-
-                try {
-                    $token = $_ENV['TELEGRAM_BOT_TOKEN'];
-                    $adminIds = array_filter(
-                        array_map('trim', explode(',', $_ENV['ADMIN_TELEGRAM_IDS']))
-                    );
-
-                    $message = sprintf(
-                        "New signup needs invite\n\nUsername: %s\nEmail: %s\n\nReview:\nhttps://aures.dev/administratorcontrol",
-                        $username,
-                        $email
-                    );
-
-                    $client = HttpClient::create();
-                    foreach ($adminIds as $chatId) {
-                        $client->request('POST', "https://api.telegram.org/bot{$token}/sendMessage", [
-                            'json' => [
-                                'chat_id' => $chatId,
-                                'text' => $message,
-                                'disable_web_page_preview' => true
-                            ]
-                        ]);
-                    }
-                } catch (Exception $e) {
-                    // Log error if bot is down, but proceed with 403
-                }
-
-                try {
-                    $sql = "INSERT INTO invites (username, accept) VALUES (:username, false) ON CONFLICT (username) DO NOTHING";
-                    $stmt = $conn->prepare($sql);
-                    $stmt->executeQuery(['username' => $username]);
-                } catch (Exception $e) {
-                    return new Response(null, 500);
-                }
-
-                return new Response(null, 403);
-            }
-
             $isNewUser = true;
+
             $user = new User();
             $user->setGithubId($githubId);
             $user->setUsername($username);
@@ -183,6 +140,7 @@ final class AuthController extends AbstractController
             $user->setAvatarUrl($avatar);
             $user->setAccessToken($accessToken);
             $user->setPlan('pro');
+            
             $this->em->persist($user);
         } else {
             $user->setUsername($username);
