@@ -119,8 +119,42 @@ final class AuthController extends AbstractController
             $githubId = $githubUser['id'];
             $username = $githubUser['login'];
             $avatar = $githubUser['avatar_url'];
-            $email = $githubUser['email'] ?? throw new Exception();
 
+            $email = $githubUser['email'] ?? null;
+
+            if (!$email) {
+                try {
+                    $emailResponse = $client->request('GET', 'https://api.github.com/user/emails', [
+                        'headers' => [
+                            'Authorization' => "token $accessToken",
+                            'Accept' => 'application/json'
+                        ]
+                    ]);
+
+                    $emails = $emailResponse->toArray();
+
+                    foreach ($emails as $e) {
+                        if ($e['primary'] && $e['verified']) {
+                            $email = $e['email'];
+                            break;
+                        }
+                    }
+
+                    if (!$email && count($emails) > 0) {
+                        $email = $emails[0]['email']; // fallback
+                    }
+
+                    if (!$email) {
+                        throw new Exception('No email found');
+                    }
+
+                } catch (TransportExceptionInterface $e) {
+                    return new Response(null, 460);
+                } catch (Exception $e) {
+                    return new Response(null, 461);
+                }
+            }
+            
         } catch (TransportExceptionInterface $e) {
             return new Response(null, 460);
         } catch (Exception $e) {
