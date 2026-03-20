@@ -164,6 +164,14 @@ final class BulkController extends AbstractController
                     }
                 }
 
+                if (!$education->getStartDate()) {
+                    $education->setStartDate(new \DateTime('1970-01-01'));
+                }
+
+                if (!$education->getEndDate()) {
+                    $education->setEndDate(new \DateTime('1970-01-01'));
+                }
+
                 $em->persist($education);
             }
         }
@@ -180,17 +188,19 @@ final class BulkController extends AbstractController
             $entity->setUser($user);
 
             // Validation
-            if (isset($item['name']) && (empty(trim($item['name'])) || strlen($item['name']) > 255)) {
+            if (empty($item['title']) || strlen(trim($item['title'])) > 255) {
                 return new JsonResponse(['error' => 'Project name is required and must be at most 255 characters.'], 400);
             }
+            //title is the "name"
+            $item['name'] = $item['title'];
 
-            if (isset($item['repo']) && (empty(trim($item['repo'])) || strlen($item['repo']) > 140)) {
-                return new JsonResponse(['error' => 'Project repo URL is required and must be at most 140 characters.'], 400);
-            }
+            // if (isset($item['repo']) && (empty(trim($item['repo'])) || strlen($item['repo']) > 140)) {
+            //     return new JsonResponse(['error' => 'Project repo URL is required and must be at most 140 characters.'], 400);
+            // }
 
-            if (isset($item['description']) && strlen($item['description']) < 100) {
-                return new JsonResponse(['error' => 'Project description must be at least 100 characters.'], 400);
-            }
+            // if (isset($item['description']) && strlen($item['description']) < 100) {
+            //     return new JsonResponse(['error' => 'Project description must be at least 100 characters.'], 400);
+            // }
 
             if (isset($item['tech']) && (!is_array($item['tech']) || empty($item['tech']))) {
                 return new JsonResponse(['error' => 'Project tech must be a non-empty array.'], 400);
@@ -198,15 +208,26 @@ final class BulkController extends AbstractController
 
             foreach ($item as $key => $value) {
                 if ($key === 'role') {
-                    if ($value !== null && !in_array($value, array_column(RoleType::cases(), 'value'), true)) {
-                        return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
+                    if (!is_array($value)) {
+                        continue; // skip instead of failing bulk
                     }
 
-                    $entity->setRole($value ? RoleType::from($value) : null);
+                    $validRoles = array_column(RoleType::cases(), 'value');
 
-                    if ($value) {
-                        $roles[$value] = ($roles[$value] ?? 0) + 1;
+                    $filtered = [];
+
+                    foreach ($value as $r) {
+                        $r = strtolower($r);
+
+                        if (in_array($r, $validRoles, true)) {
+                            $filtered[] = $r;
+                            $roles[$r] = ($roles[$r] ?? 0) + 1;
+                        }
                     }
+
+                    // optional: if empty, just set []
+                    $entity->setRole($filtered);
+
                     continue;
                 }
 
@@ -249,6 +270,14 @@ final class BulkController extends AbstractController
                 }
             }
 
+            if (!$entity->getStartDate()) {
+                $entity->setStartDate(new \DateTime('1970-01-01'));
+            }
+
+            if (!$entity->getEndDate()) {
+                $entity->setEndDate(new \DateTime('1970-01-01'));
+            }
+
             $em->persist($entity);
             $user->incrementProjectsCount();
         }
@@ -273,15 +302,26 @@ final class BulkController extends AbstractController
 
             foreach ($item as $key => $value) {
                 if ($key === 'role') {
-                    if ($value !== null && !in_array($value, array_column(RoleType::cases(), 'value'), true)) {
-                        return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
+                    if (!is_array($value)) {
+                        continue; // skip instead of failing bulk
                     }
 
-                    if ($value) {
-                        $roles[$value] = ($roles[$value] ?? 0) + 1;
+                    $validRoles = array_column(RoleType::cases(), 'value');
+
+                    $filtered = [];
+
+                    foreach ($value as $r) {
+                        $r = strtolower($r);
+
+                        if (in_array($r, $validRoles, true)) {
+                            $filtered[] = $r;
+                            $roles[$r] = ($roles[$r] ?? 0) + 1;
+                        }
                     }
 
-                    $entity->setRole($value ? RoleType::from($value) : null);
+                    // optional: if empty, just set []
+                    $entity->setRole($filtered);
+
                     continue;
                 }
 
@@ -293,6 +333,14 @@ final class BulkController extends AbstractController
                         $entity->$setter($value);
                     }
                 }
+            }
+
+            if (!$entity->getStartDate()) {
+                $entity->setStartDate(new \DateTime('1970-01-01'));
+            }
+
+            if (!$entity->getEndDate()) {
+                $entity->setEndDate(new \DateTime('1970-01-01'));
             }
 
             $em->persist($entity);
@@ -309,13 +357,14 @@ final class BulkController extends AbstractController
                 return new JsonResponse(['error' => 'Certification title is required.'], 400);
             }
 
-            if (isset($item['platform']) && empty(trim($item['platform']))) {
-                return new JsonResponse(['error' => 'Certification platform is required.'], 400);
+            if (isset($item['issuer']) && empty(trim($item['issuer']))) {
+                return new JsonResponse(['error' => 'Certification issuer is required.'], 400);
             }
+            $item['platform'] = $item['issuer'];
 
-            if (!empty($item['url']) && !filter_var($item['url'], FILTER_VALIDATE_URL)) {
-                return new JsonResponse(['error' => 'Certification URL must be a valid URL.'], 400);
-            }
+            // if (!empty($item['url']) && !filter_var($item['url'], FILTER_VALIDATE_URL)) {
+            //     return new JsonResponse(['error' => 'Certification URL must be a valid URL.'], 400);
+            // }
 
             if (!empty($item['completedOn'])) {
                 try {
@@ -330,15 +379,26 @@ final class BulkController extends AbstractController
 
             foreach ($item as $key => $value) {
                 if ($key === 'role') {
-                    if ($value !== null && !in_array($value, array_column(RoleType::cases(), 'value'), true)) {
-                        return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
+                    if (!is_array($value)) {
+                        continue; // skip instead of failing bulk
                     }
 
-                    if ($value) {
-                        $roles[$value] = ($roles[$value] ?? 0) + 1;
+                    $validRoles = array_column(RoleType::cases(), 'value');
+
+                    $filtered = [];
+
+                    foreach ($value as $r) {
+                        $r = strtolower($r);
+
+                        if (in_array($r, $validRoles, true)) {
+                            $filtered[] = $r;
+                            $roles[$r] = ($roles[$r] ?? 0) + 1;
+                        }
                     }
 
-                    $entity->setRole($value ? RoleType::from($value) : null);
+                    // optional: if empty, just set []
+                    $entity->setRole($filtered);
+
                     continue;
                 }
 
@@ -350,6 +410,10 @@ final class BulkController extends AbstractController
                         $entity->$setter($value);
                     }
                 }
+            }
+            
+            if (!$entity->getCompletedOn()) {
+                $entity->setCompletedOn(new \DateTime('1970-01-01'));
             }
 
             $em->persist($entity);
@@ -366,13 +430,13 @@ final class BulkController extends AbstractController
                 return new JsonResponse(['error' => 'Award title is required.'], 400);
             }
 
-            if (isset($item['issuer']) && empty(trim($item['issuer']))) {
-                return new JsonResponse(['error' => 'Award issuer is required.'], 400);
-            }
+            // if (isset($item['issuer']) && empty(trim($item['issuer']))) {
+            //     return new JsonResponse(['error' => 'Award issuer is required.'], 400);
+            // }
 
-            if (!isset($item['type'])) {
-                return new JsonResponse(['error' => 'Award type is required.'], 400);
-            }
+            // if (!isset($item['type'])) {
+            //     return new JsonResponse(['error' => 'Award type is required.'], 400);
+            // }
 
             if (!empty($item['date'])) {
                 try {
@@ -387,15 +451,26 @@ final class BulkController extends AbstractController
 
             foreach ($item as $key => $value) {
                 if ($key === 'role') {
-                    if ($value !== null && !in_array($value, array_column(RoleType::cases(), 'value'), true)) {
-                        return new JsonResponse(['error' => 'Invalid role. Must be one of: frontend, backend, fullstack, devops.'], 400);
+                    if (!is_array($value)) {
+                        continue; // skip instead of failing bulk
                     }
 
-                    if ($value) {
-                        $roles[$value] = ($roles[$value] ?? 0) + 1;
+                    $validRoles = array_column(RoleType::cases(), 'value');
+
+                    $filtered = [];
+
+                    foreach ($value as $r) {
+                        $r = strtolower($r);
+
+                        if (in_array($r, $validRoles, true)) {
+                            $filtered[] = $r;
+                            $roles[$r] = ($roles[$r] ?? 0) + 1;
+                        }
                     }
 
-                    $entity->setRole($value ? RoleType::from($value) : null);
+                    // optional: if empty, just set []
+                    $entity->setRole($filtered);
+
                     continue;
                 }
 
