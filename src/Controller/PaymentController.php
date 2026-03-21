@@ -29,7 +29,7 @@ class PaymentController extends AbstractController
     }
 
     #[Route('/api/subscription/create', name: 'api_subscription_create', methods: ['POST'])]
-    public function createSubscription(UserInterface $user): JsonResponse
+    public function createSubscription(UserInterface $user, Request $request): JsonResponse
     {
         
         if (!$this->razorpayKeyId || !$this->razorpayKeySecret || !$this->razorpayPlanId) {
@@ -58,6 +58,11 @@ class PaymentController extends AbstractController
                 $this->entityManager->flush();
             }
 
+            $payload = json_decode($request->getContent(), true) ?? [];
+            $coupon = $payload['coupon'] ?? null;
+            $offerId = $_ENV['RAZORPAY_OFFER_ID'] ?? null;
+            $specialCode = $_ENV['SPECIAL_OFFER_CODE'] ?? null;
+
             // Create a subscription
             $subscriptionData = [
                 'plan_id' => $this->razorpayPlanId,
@@ -65,6 +70,10 @@ class PaymentController extends AbstractController
                 'total_count' => 120, // Example: 10 years of monthly billing
                 'customer_notify' => 1
             ];
+
+            if ($coupon && $specialCode && strtoupper($coupon) === strtoupper($specialCode) && $offerId) {
+                $subscriptionData['offer_id'] = $offerId;
+            }
 
             $subscription = $api->subscription->create($subscriptionData);
 
