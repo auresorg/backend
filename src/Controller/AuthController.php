@@ -173,7 +173,7 @@ final class AuthController extends AbstractController
             $user->setEmail($email);
             $user->setAvatarUrl($avatar);
             $user->setAccessToken($accessToken);
-            $user->setPlan('pro');
+            $user->setPlan('free');
             
             $this->em->persist($user);
         } else {
