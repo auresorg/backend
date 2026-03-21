@@ -282,6 +282,34 @@ class User implements UserInterface
     #[ORM\Column(name: 'phoneNumber', type: 'string', length: 20, nullable: true)]
     private ?string $phoneNumber = null;
 
+    #[ORM\Column(name: 'razorpayCustomerId', type: 'string', length: 255, nullable: true)]
+    private ?string $razorpayCustomerId = null;
+
+    #[ORM\Column(name: 'razorpaySubscriptionId', type: 'string', length: 255, nullable: true)]
+    private ?string $razorpaySubscriptionId = null;
+
+    public function getRazorpayCustomerId(): ?string
+    {
+        return $this->razorpayCustomerId;
+    }
+
+    public function setRazorpayCustomerId(?string $razorpayCustomerId): self
+    {
+        $this->razorpayCustomerId = $razorpayCustomerId;
+        return $this;
+    }
+
+    public function getRazorpaySubscriptionId(): ?string
+    {
+        return $this->razorpaySubscriptionId;
+    }
+
+    public function setRazorpaySubscriptionId(?string $razorpaySubscriptionId): self
+    {
+        $this->razorpaySubscriptionId = $razorpaySubscriptionId;
+        return $this;
+    }
+
     public function getPhoneNumber(): ?string
     {
         return $this->phoneNumber;
