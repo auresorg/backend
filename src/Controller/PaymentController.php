@@ -78,6 +78,37 @@ class PaymentController extends AbstractController
         }
     }
 
+    #[Route('/api/subscription/cancel', name: 'api_subscription_cancel', methods: ['POST'])]
+    public function cancelSubscription(UserInterface $user): JsonResponse
+    {
+        if (!$this->razorpayKeyId || !$this->razorpayKeySecret) {
+            return new JsonResponse(['error' => 'Razorpay credentials not configured'], 500);
+        }
+
+        if (!$user instanceof User) {
+            return new JsonResponse(['error' => 'Invalid user'], 400);
+        }
+
+        $subscriptionId = $user->getRazorpaySubscriptionId();
+        if (!$subscriptionId) {
+            return new JsonResponse(['error' => 'No active subscription found'], 400);
+        }
+
+        try {
+            $api = new Api($this->razorpayKeyId, $this->razorpayKeySecret);
+            $api->subscription->fetch($subscriptionId)->cancel(['cancel_at_cycle_end' => 0]);
+
+            // Optimistically update DB (webhook will also fire)
+            $user->setPlan('free');
+            $user->setRazorpaySubscriptionId(null);
+            $this->entityManager->flush();
+
+            return new JsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()], 400);
+        }
+    }
+
     #[Route('/api/webhooks/razorpay', name: 'api_webhooks_razorpay', methods: ['POST'])]
     public function razorpayWebhook(Request $request): JsonResponse
     {
