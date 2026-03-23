@@ -153,6 +153,13 @@ final class BulkController extends AbstractController
 
                 $education->setUser($user);
 
+                if (isset($best['data']['title']) && !isset($best['data']['degree'])) {
+                    $best['data']['degree'] = $best['data']['title'];
+                }
+                if (isset($best['data']['institution']) && !isset($best['data']['school'])) {
+                    $best['data']['school'] = $best['data']['institution'];
+                }
+
                 foreach ($best['data'] as $key => $value) {
                     $setter = 'set' . ucfirst($key);
 
@@ -191,22 +198,22 @@ final class BulkController extends AbstractController
             $entity->setUser($user);
 
             // Validation
-            if (empty($item['title']) || strlen(trim($item['title'])) > 255) {
-                return new JsonResponse(['error' => 'Project name is required and must be at most 255 characters.'], 400);
+            if (empty(trim($item['title'] ?? ''))) {
+                $item['title'] = 'Untitled Project';
             }
             //title is the "name"
             $item['name'] = $item['title'];
 
-            // if (isset($item['repo']) && (empty(trim($item['repo'])) || strlen($item['repo']) > 140)) {
-            //     return new JsonResponse(['error' => 'Project repo URL is required and must be at most 140 characters.'], 400);
-            // }
+            if (empty(trim($item['repo'] ?? ''))) {
+                $item['repo'] = 'Unknown';
+            }
 
             // if (isset($item['description']) && strlen($item['description']) < 100) {
             //     return new JsonResponse(['error' => 'Project description must be at least 100 characters.'], 400);
             // }
 
-            if (isset($item['tech']) && (!is_array($item['tech']) || empty($item['tech']))) {
-                return new JsonResponse(['error' => 'Project tech must be a non-empty array.'], 400);
+            if (empty($item['tech']) || !is_array($item['tech'])) {
+                $item['tech'] = [];
             }
 
             foreach ($item as $key => $value) {
@@ -291,16 +298,16 @@ final class BulkController extends AbstractController
             $entity->setUser($user);
 
             // Validation
-            if (isset($item['title']) && empty(trim($item['title']))) {
-                return new JsonResponse(['error' => 'Experience title is required.'], 400);
+            if (empty(trim($item['title'] ?? ''))) {
+                $item['title'] = 'Unknown Role';
             }
 
-            if (isset($item['company']) && empty(trim($item['company']))) {
-                return new JsonResponse(['error' => 'Experience company is required.'], 400);
+            if (empty(trim($item['company'] ?? ''))) {
+                $item['company'] = 'Unknown Company';
             }
 
-            if (isset($item['startDate']) && empty($item['startDate'])) {
-                return new JsonResponse(['error' => 'Experience start date is required.'], 400);
+            if (empty($item['startDate'])) {
+                $item['startDate'] = '1970-01-01';
             }
 
             foreach ($item as $key => $value) {
@@ -356,12 +363,12 @@ final class BulkController extends AbstractController
             $entity->setUser($user);
 
             // Validation
-            if (isset($item['title']) && empty(trim($item['title']))) {
-                return new JsonResponse(['error' => 'Certification title is required.'], 400);
+            if (empty(trim($item['title'] ?? ''))) {
+                $item['title'] = 'Unknown Certification';
             }
 
-            if (isset($item['issuer']) && empty(trim($item['issuer']))) {
-                return new JsonResponse(['error' => 'Certification issuer is required.'], 400);
+            if (empty(trim($item['issuer'] ?? ''))) {
+                $item['issuer'] = 'Unknown Issuer';
             }
             $item['platform'] = $item['issuer'];
 
@@ -429,17 +436,17 @@ final class BulkController extends AbstractController
             $entity->setUser($user);
 
             // Validation
-            if (isset($item['title']) && empty(trim($item['title']))) {
-                return new JsonResponse(['error' => 'Award title is required.'], 400);
+            if (empty(trim($item['title'] ?? ''))) {
+                $item['title'] = 'Unknown Award';
             }
 
-            // if (isset($item['issuer']) && empty(trim($item['issuer']))) {
-            //     return new JsonResponse(['error' => 'Award issuer is required.'], 400);
-            // }
+            if (empty(trim($item['issuer'] ?? ''))) {
+                $item['issuer'] = 'Unknown';
+            }
 
-            // if (!isset($item['type'])) {
-            //     return new JsonResponse(['error' => 'Award type is required.'], 400);
-            // }
+            if (empty(trim($item['type'] ?? ''))) {
+                $item['type'] = 'Award';
+            }
 
             if (!empty($item['date'])) {
                 try {
