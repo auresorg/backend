@@ -14,16 +14,19 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use App\Service\ResumeCacheInvalidatorHelper;
+use App\Service\NotificationService;
 
 #[Route('/api/awards')]
 #[IsGranted('ROLE_USER')]
 final class AwardController extends AbstractController
 {
     private ResumeCacheInvalidatorHelper $cache;
+    private NotificationService $notificationService;
 
-    public function __construct(ResumeCacheInvalidatorHelper $cache)
+    public function __construct(ResumeCacheInvalidatorHelper $cache, NotificationService $notificationService)
     {
         $this->cache = $cache;
+        $this->notificationService = $notificationService;
     }
 
     #[Route('', name: 'api_awards_index', methods: ['GET'])]
@@ -156,6 +159,11 @@ final class AwardController extends AbstractController
                 $user->getUsername(),
                 $r
             );
+        }
+
+        $totalItems = $user->getProjectsCount() + $user->getExperienceCount() + $user->getCertCount() + $user->getAwardsCount();
+        if ($totalItems === 2) {
+             $this->notificationService->createNotification($user, "You now have multiple items! Checkout the custom resumes section to build a tailored resume.", "info");
         }
 
         return $this->json($awardData, Response::HTTP_CREATED);

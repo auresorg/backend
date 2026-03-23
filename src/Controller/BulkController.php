@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\ResumeCacheInvalidatorHelper;
+use App\Service\NotificationService;
 use App\Entity\RoleType;
 use App\Entity\User;
 use App\Entity\Education;
@@ -22,10 +23,12 @@ use function in_array;
 final class BulkController extends AbstractController
 {
     private ResumeCacheInvalidatorHelper $cache;
+    private NotificationService $notificationService;
 
-    public function __construct(ResumeCacheInvalidatorHelper $cache)
+    public function __construct(ResumeCacheInvalidatorHelper $cache, NotificationService $notificationService)
     {
         $this->cache = $cache;
+        $this->notificationService = $notificationService;
     }
 
     private function parseDate(?string $value): ?\DateTime
@@ -497,6 +500,12 @@ final class BulkController extends AbstractController
         $user->setSkills($skillCounts);
         /* ---------- SINGLE FLUSH ---------- */
         $em->flush();
+
+        $this->notificationService->createNotification(
+            $user,
+            "Bulk import successful! Please check and verify your data. We recommend using our AI features to rewrite your descriptions for the best outcome.",
+            "info"
+        );
 
         // Invalidate cache after successful update, for each role the user has in the updated entities
         foreach ($roles as $role => $count) {

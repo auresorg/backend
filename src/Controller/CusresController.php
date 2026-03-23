@@ -13,16 +13,19 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use function is_array;
 use App\Service\ResumeCacheInvalidatorHelper;
+use App\Service\NotificationService;
 
 #[Route('/api/cusres')]
 #[IsGranted('ROLE_USER')]
 final class CusresController extends AbstractController
 {
     private ResumeCacheInvalidatorHelper $cache;
+    private NotificationService $notificationService;
 
-    public function __construct(ResumeCacheInvalidatorHelper $cache)
+    public function __construct(ResumeCacheInvalidatorHelper $cache, NotificationService $notificationService)
     {
         $this->cache = $cache;
+        $this->notificationService = $notificationService;
     }
 
     /* ---------------------------------------------------- */
@@ -104,6 +107,10 @@ final class CusresController extends AbstractController
 
             $em->persist($c);
             $em->flush();
+
+            if ($repo->count(['user' => $u]) === 1) {
+                $this->notificationService->createNotification($u, "Congratulations on deploying your first custom resume! Visit your public portfolio below to see it live.", "check-circle");
+            }
         } catch (UniqueConstraintViolationException) {
             return $this->json(['error' => 'Slug already exists'], 409);
         }
