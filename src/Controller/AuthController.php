@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
+use App\Service\NotificationService;
 
 #[Route('/auth')]
 final class AuthController extends AbstractController
@@ -28,8 +29,9 @@ final class AuthController extends AbstractController
     private LoggerInterface $logger;
     private string $githubClientId;
     private string $githubClientSecret;
+    private NotificationService $notificationService;
 
-    public function __construct(EntityManagerInterface $em, UserRepository $userRepository, LoggerInterface $logger, JWTTokenManagerInterface $jwtManager, RefreshTokenManagerInterface $refreshTokenManager)
+    public function __construct(EntityManagerInterface $em, UserRepository $userRepository, LoggerInterface $logger, JWTTokenManagerInterface $jwtManager, RefreshTokenManagerInterface $refreshTokenManager, NotificationService $notificationService)
     {
         $this->em = $em;
         $this->userRepository = $userRepository;
@@ -38,6 +40,7 @@ final class AuthController extends AbstractController
         $this->jwtManager = $jwtManager;
         $this->logger = $logger;
         $this->refreshTokenManager = $refreshTokenManager;
+        $this->notificationService = $notificationService;
     }
 
     /**
@@ -202,6 +205,8 @@ final class AuthController extends AbstractController
 
             $sql .= implode(', ', $values);
             $conn->executeStatement($sql, $params);
+
+            $this->notificationService->createNotification($user, "Welcome! Get started by adding your first project.", "info");
         }
 
         $jwt = null;
