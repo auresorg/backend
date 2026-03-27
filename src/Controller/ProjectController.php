@@ -298,7 +298,17 @@ final class ProjectController extends AbstractController
             $project->getId()
         );
 
-        return $this->json(null, Response::HTTP_OK);;
+        return $this->json([
+            'id' => $project->getId(),
+            'name' => $project->getName(),
+            'repo' => $project->getRepo(),
+            'url' => $project->getUrl(),
+            'tech' => $project->getTech(),
+            'description' => $project->getDescription(),
+            'role' => $project->getRole(),
+            'startDate' => $project->getStartDate()->format('Y-m-d'),
+            'endDate' => $project->getEndDate()?->format('Y-m-d')
+        ], Response::HTTP_OK);
     }
 
     #[Route('/{id}', name: 'api_project_delete', methods: ['DELETE'])]

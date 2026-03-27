@@ -120,7 +120,15 @@ final class ExperienceController extends AbstractController
              $this->notificationService->createNotification($user, "You now have multiple items! Checkout the custom resumes section to build a tailored resume.", "info");
         }
 
-        return $this->json(['id' => $exp->getId()], 201);
+        return $this->json([
+            'id' => $exp->getId(),
+            'title' => $exp->getTitle(),
+            'company' => $exp->getCompany(),
+            'startDate' => $exp->getStartDate()?->format('Y-m-d'),
+            'endDate' => $exp->getEndDate()?->format('Y-m-d'),
+            'description' => $exp->getDescription(),
+            'role' => $exp->getRole(),
+        ], 201);
     }
 
     #[Route('/{id}', name: 'api_experiences_update', methods: ['PUT', 'PATCH'])]
@@ -190,7 +198,15 @@ final class ExperienceController extends AbstractController
             $exp->getId()
         );
 
-        return $this->json(['updated'=>true]);
+        return $this->json([
+            'id' => $exp->getId(),
+            'title' => $exp->getTitle(),
+            'company' => $exp->getCompany(),
+            'startDate' => $exp->getStartDate()?->format('Y-m-d'),
+            'endDate' => $exp->getEndDate()?->format('Y-m-d'),
+            'description' => $exp->getDescription(),
+            'role' => $exp->getRole(),
+        ]);
     }
 
     #[Route('/{id}', name: 'api_experiences_delete', methods: ['DELETE'])]

@@ -45,6 +45,7 @@ final class AwardController extends AbstractController
                 'type' => $award->getType(),
                 'description' => $award->getDescription(),
                 'role' => $award->getRole(),
+                'date' => $award->getDate()?->format('Y-m-d'),
             ];
         }
 
@@ -69,6 +70,7 @@ final class AwardController extends AbstractController
             'type' => $award->getType(),
             'description' => $award->getDescription(),
             'role' => $award->getRole(),
+            'date' => $award->getDate()?->format('Y-m-d'),
         ];
 
         return $this->json($awardData, Response::HTTP_OK);
@@ -147,6 +149,7 @@ final class AwardController extends AbstractController
             'type' => $award->getType(),
             'description' => $award->getDescription(),
             'role' => $award->getRole(),
+            'date' => $award->getDate()?->format('Y-m-d'),
         ];
 
         // if (function_exists('fastcgi_finish_request')) {
@@ -264,6 +267,7 @@ final class AwardController extends AbstractController
             'type' => $award->getType(),
             'description' => $award->getDescription(),
             'role' => $award->getRole(),
+            'date' => $award->getDate()?->format('Y-m-d'),
         ];
 
         $this->cache->invalidateAfterEntityUpdate(
